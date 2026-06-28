@@ -255,13 +255,28 @@
 <!-- ── BETALINGSPOPUP ── -->
 <div class="betaling-overlay" id="betaling-overlay" style="display:none;">
   <div class="betaling-box">
-    <h2>💶 Wekelijks betalingsoverzicht</h2>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <h2>💶 Betalingsoverzicht</h2>
+      <button onclick="toonBetalingHistorie()" style="font-size:0.78rem;font-weight:600;color:#2b6cb0;background:none;border:none;cursor:pointer;text-decoration:underline;">📋 Alle overzichten</button>
+    </div>
     <p class="subtitle" id="betaling-subtitle"></p>
     <div id="betaling-content"></div>
     <div style="margin-top:16px;padding:10px 12px;background:#f0fff4;border-radius:8px;font-size:0.78rem;color:#276749;border:1px solid #c6f6d5;">
       ✅ Alleen gecheckte ritten zijn meegenomen. Markeer ritten als gecontroleerd via "Alle ritten".
     </div>
     <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="sluitBetalingPopup()">Sluiten</button>
+  </div>
+</div>
+
+<!-- ── BETALING HISTORIE POPUP ── -->
+<div class="betaling-overlay" id="historie-overlay" style="display:none;">
+  <div class="betaling-box" style="max-width:560px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2>📋 Alle betalingsoverzichten</h2>
+      <button onclick="sluitHistoriePopup()" style="font-size:1.2rem;background:none;border:none;cursor:pointer;color:#718096;">✕</button>
+    </div>
+    <div id="historie-content"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:14px;" onclick="sluitHistoriePopup()">Sluiten</button>
   </div>
 </div>
 
@@ -1246,7 +1261,10 @@ function renderSettings() {
   <div class="form-card">
     <h2>💶 Betalingsoverzicht</h2>
     <p style="font-size:0.82rem;color:#718096;margin-bottom:14px;">Elke zondag verschijnt automatisch een popup met het totaalbedrag per bestuurder op basis van gecheckte ritten. Je kunt het ook handmatig openen.</p>
-    <button class="btn btn-primary btn-block" onclick="toonBetalingOverzicht()">💶 Betalingsoverzicht openen</button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="flex:1;" onclick="toonBetalingOverzicht()">💶 Huidig overzicht</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="toonBetalingHistorie()">📋 Alle overzichten</button>
+    </div>
   </div>`;
 
   const tariefSection = `
@@ -1915,14 +1933,57 @@ window.render = render;
 
 // ─── BOOT ────────────────────────────────────────────────────────────────────
 // ── BETALINGSPOPUP ──
+// ── BETALINGS HELPERS ──
+function getWeekInfo(date) {
+  // Geeft weeknummer, maandagdatum en zondagdatum terug
+  const d = new Date(date);
+  const dag = d.getDay(); // 0=zo, 1=ma...
+  const diffNaarMa = (dag === 0) ? -6 : 1 - dag;
+  const maandag = new Date(d);
+  maandag.setDate(d.getDate() + diffNaarMa);
+  const zondag = new Date(maandag);
+  zondag.setDate(maandag.getDate() + 6);
+
+  // ISO weeknummer
+  const tmp = new Date(maandag);
+  tmp.setHours(0,0,0,0);
+  tmp.setDate(tmp.getDate() + 4 - (tmp.getDay()||7));
+  const jaarStart = new Date(tmp.getFullYear(),0,1);
+  const weekNr = Math.ceil((((tmp-jaarStart)/86400000)+1)/7);
+
+  const fmt2 = (d) => d.toLocaleDateString('nl-NL', { day:'numeric', month:'long' });
+  return {
+    weekNr,
+    jaar: maandag.getFullYear(),
+    label: `Week ${weekNr} (${fmt2(maandag)} t/m ${fmt2(zondag)})`,
+    maandagStr: maandag.toISOString().split('T')[0],
+    zondagStr:  zondag.toISOString().split('T')[0],
+  };
+}
+
+function bouwBetalingInhoud(perBestuurder, totaalAlles) {
+  return perBestuurder.map(r => `
+    <div class="betaling-driver-row">
+      <div>
+        <div class="name">${r.driver.emoji} ${r.driver.name}</div>
+        <div class="ritten">${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</div>
+      </div>
+      <div class="bedrag">${fmtEur(r.totaal)}</div>
+    </div>`).join('') + `
+    <div style="border-top:2px solid #e2e8f0;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+      <strong>Totaal te betalen</strong>
+      <strong style="font-size:1.2rem;color:#1a365d;">${fmtEur(totaalAlles)}</strong>
+    </div>`;
+}
+
 function checkZondagBetaling() {
-  const dag = new Date().getDay(); // 0 = zondag
+  const nu = new Date();
+  const dag = nu.getDay(); // 0 = zondag
   if (dag !== 0) return;
 
-  const sleutel = 'betaling_getoond_' + new Date().toISOString().split('T')[0];
+  const sleutel = 'betaling_getoond_' + nu.toISOString().split('T')[0];
   if (localStorage.getItem(sleutel)) return;
 
-  // Bereken gecheckte ritten per bestuurder
   const gecheckt = state.trips.filter(t => t.checked);
   if (gecheckt.length === 0) return;
 
@@ -1934,36 +1995,40 @@ function checkZondagBetaling() {
 
   if (perBestuurder.length === 0) return;
 
-  const vandaag = new Date().toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' });
-  document.getElementById('betaling-subtitle').textContent = `Overzicht van ${vandaag} — gecheckte ritten deze week`;
-
-  const inhoud = perBestuurder.map(r => `
-    <div class="betaling-driver-row">
-      <div>
-        <div class="name">${r.driver.emoji} ${r.driver.name}</div>
-        <div class="ritten">${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</div>
-      </div>
-      <div class="bedrag">${fmtEur(r.totaal)}</div>
-    </div>`).join('');
+  const weekInfo = getWeekInfo(nu);
+  document.getElementById('betaling-subtitle').innerHTML =
+    `<strong>${weekInfo.label}</strong><br><span style="font-size:0.75rem;color:#a0aec0;">Automatisch overzicht van deze zondag</span>`;
 
   const totaalAlles = perBestuurder.reduce((a,r)=>a+r.totaal,0);
-  document.getElementById('betaling-content').innerHTML = inhoud + `
-    <div style="border-top:2px solid #e2e8f0;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
-      <strong>Totaal te betalen</strong>
-      <strong style="font-size:1.2rem;color:#1a365d;">${fmtEur(totaalAlles)}</strong>
-    </div>`;
-
+  document.getElementById('betaling-content').innerHTML = bouwBetalingInhoud(perBestuurder, totaalAlles);
   document.getElementById('betaling-overlay').style.display = 'flex';
+
+  // Sla op in historie
+  slaBetalingOp(weekInfo, perBestuurder, totaalAlles);
   localStorage.setItem(sleutel, '1');
 }
 window.checkZondagBetaling = checkZondagBetaling;
+
+function slaBetalingOp(weekInfo, perBestuurder, totaalAlles) {
+  const historie = JSON.parse(localStorage.getItem('betaling_historie') || '[]');
+  // Geen duplicaten
+  if (historie.some(h => h.weekNr === weekInfo.weekNr && h.jaar === weekInfo.jaar)) return;
+  historie.unshift({
+    weekNr: weekInfo.weekNr,
+    jaar: weekInfo.jaar,
+    label: weekInfo.label,
+    datum: new Date().toISOString().split('T')[0],
+    perBestuurder: perBestuurder.map(r => ({ naam: r.driver.emoji+' '+r.driver.name, ritten: r.ritten, km: r.km, totaal: r.totaal })),
+    totaalAlles,
+  });
+  localStorage.setItem('betaling_historie', JSON.stringify(historie.slice(0, 52))); // max 1 jaar
+}
 
 function sluitBetalingPopup() {
   document.getElementById('betaling-overlay').style.display = 'none';
 }
 window.sluitBetalingPopup = sluitBetalingPopup;
 
-// Handmatig openen vanuit instellingen
 function toonBetalingOverzicht() {
   const gecheckt = state.trips.filter(t => t.checked);
   if (gecheckt.length === 0) { alert('Geen gecheckte ritten gevonden.'); return; }
@@ -1976,28 +2041,49 @@ function toonBetalingOverzicht() {
 
   if (perBestuurder.length === 0) { alert('Geen openstaande vergoedingen gevonden.'); return; }
 
-  const vandaag = new Date().toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' });
-  document.getElementById('betaling-subtitle').textContent = `Handmatig geopend op ${vandaag}`;
-
-  const inhoud = perBestuurder.map(r => `
-    <div class="betaling-driver-row">
-      <div>
-        <div class="name">${r.driver.emoji} ${r.driver.name}</div>
-        <div class="ritten">${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</div>
-      </div>
-      <div class="bedrag">${fmtEur(r.totaal)}</div>
-    </div>`).join('');
+  const weekInfo = getWeekInfo(new Date());
+  document.getElementById('betaling-subtitle').innerHTML =
+    `<strong>${weekInfo.label}</strong><br><span style="font-size:0.75rem;color:#a0aec0;">Handmatig geopend — alle gecheckte ritten</span>`;
 
   const totaalAlles = perBestuurder.reduce((a,r)=>a+r.totaal,0);
-  document.getElementById('betaling-content').innerHTML = inhoud + `
-    <div style="border-top:2px solid #e2e8f0;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
-      <strong>Totaal te betalen</strong>
-      <strong style="font-size:1.2rem;color:#1a365d;">${fmtEur(totaalAlles)}</strong>
-    </div>`;
-
+  document.getElementById('betaling-content').innerHTML = bouwBetalingInhoud(perBestuurder, totaalAlles);
   document.getElementById('betaling-overlay').style.display = 'flex';
 }
 window.toonBetalingOverzicht = toonBetalingOverzicht;
+
+function toonBetalingHistorie() {
+  document.getElementById('betaling-overlay').style.display = 'none';
+  const historie = JSON.parse(localStorage.getItem('betaling_historie') || '[]');
+  const box = document.getElementById('historie-content');
+
+  if (historie.length === 0) {
+    box.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="es-icon">📋</div>Nog geen betalingsoverzichten opgeslagen.<br><span style="font-size:0.78rem;">Elke zondag wordt automatisch een overzicht opgeslagen.</span></div>`;
+  } else {
+    box.innerHTML = historie.map(h => `
+      <div style="border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div>
+            <div style="font-weight:700;font-size:0.9rem;">📅 ${h.label}</div>
+            <div style="font-size:0.72rem;color:#a0aec0;margin-top:1px;">Opgeslagen op ${h.datum}</div>
+          </div>
+          <div style="font-size:1.1rem;font-weight:800;color:#1a365d;">${fmtEur(h.totaalAlles)}</div>
+        </div>
+        ${h.perBestuurder.map(r => `
+          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:#f7fafc;border-radius:7px;margin-bottom:4px;font-size:0.82rem;">
+            <span>${r.naam} <span style="color:#a0aec0;">· ${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</span></span>
+            <strong>${fmtEur(r.totaal)}</strong>
+          </div>`).join('')}
+      </div>`).join('');
+  }
+
+  document.getElementById('historie-overlay').style.display = 'flex';
+}
+window.toonBetalingHistorie = toonBetalingHistorie;
+
+function sluitHistoriePopup() {
+  document.getElementById('historie-overlay').style.display = 'none';
+}
+window.sluitHistoriePopup = sluitHistoriePopup;
 
 tryAutoConnect();
 
