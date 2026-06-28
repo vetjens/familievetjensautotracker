@@ -285,6 +285,8 @@ const state = {
   filterDriverId: 'all',
   editTripId: null,
   statPeriod: 'maand',
+  statYear: new Date().getFullYear(),
+  statMonth: new Date().getMonth() + 1,
   searchQuery: '',
   ritten_view: 'lijst',  // 'lijst' of 'kalender'
   favBestemmingen: [],
@@ -660,8 +662,18 @@ function slaVasteRitOp() {
   const goal     = document.getElementById('f-goal')?.value;
   const notitie  = document.getElementById('f-notitie')?.value.trim() || '';
   const route    = document.getElementById('f-route')?.value.trim() || '';
+  // Km ophalen afhankelijk van invoermodus
+  let km = null;
+  if (invoerMode === 'gereden') {
+    const v = parseInt(document.getElementById('f-km-gereden')?.value);
+    if (!isNaN(v) && v > 0) km = v;
+  } else {
+    const begin = parseInt(document.getElementById('f-km-begin')?.value);
+    const eind  = parseInt(document.getElementById('f-km-eind')?.value);
+    if (!isNaN(begin) && !isNaN(eind) && eind > begin) km = eind - begin;
+  }
   if (!dest) { alert('Vul eerst een bestemming in.'); return; }
-  state.terugkerendeRitten.push({ id: state.nextTerugkerendId++, carId, driverId, dest, goal, notitie, route });
+  state.terugkerendeRitten.push({ id: state.nextTerugkerendId++, carId, driverId, dest, goal, notitie, route, km });
   pushToFirebase();
   render();
 }
@@ -671,8 +683,8 @@ function gebruikVasteRit(id) {
   const r = state.terugkerendeRitten.find(x=>x.id===id);
   if (!r) return;
   setTimeout(() => {
-    const carSel = document.getElementById('f-car');
-    const drvSel = document.getElementById('f-driver');
+    const carSel  = document.getElementById('f-car');
+    const drvSel  = document.getElementById('f-driver');
     const destInp = document.getElementById('f-dest');
     const goalSel = document.getElementById('f-goal');
     const notInp  = document.getElementById('f-notitie');
@@ -684,6 +696,12 @@ function gebruikVasteRit(id) {
     if (notInp)  notInp.value  = r.notitie || '';
     if (rouInp)  rouInp.value  = r.route   || '';
     prefillCarKm();
+    // Km automatisch invullen als opgeslagen
+    if (r.km && r.km > 0) {
+      switchInvoer('gereden');
+      const kmInp = document.getElementById('f-km-gereden');
+      if (kmInp) { kmInp.value = r.km; showKmPreviewGereden(); }
+    }
   }, 50);
 }
 window.gebruikVasteRit = gebruikVasteRit;
@@ -1056,7 +1074,7 @@ function renderAdd() {
         const c = state.cars.find(x=>x.id===r.carId);
         const cat = state.categories.find(x=>x.id===r.goal);
         return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f7fafc;border-radius:8px;border:1px solid #e2e8f0;">
-          <div style="flex:1;font-size:0.82rem;"><strong>${r.dest}</strong> <span style="color:#718096;">· ${d?d.name:'?'} · ${c?c.icon+' '+c.name:'?'} · ${cat?cat.icon+' '+cat.label:'?'}</span></div>
+          <div style="flex:1;font-size:0.82rem;"><strong>${r.dest}</strong> <span style="color:#718096;">· ${d?d.name:'?'} · ${c?c.icon+' '+c.name:'?'} · ${cat?cat.icon+' '+cat.label:'?'}${r.km?` · ${fmt(r.km)} km`:''}</span></div>
           <button class="btn-sm btn-ghost" onclick="gebruikVasteRit(${r.id})" style="white-space:nowrap;">↩ Gebruik</button>
           <button class="btn-sm btn-danger-sm" onclick="verwijderVasteRit(${r.id})">🗑</button>
         </div>`;
@@ -1165,7 +1183,7 @@ function renderTrips() {
     </div>
   </div>
   ${summary}
-  ${state.ritten_view === 'kalender' ? renderKalender(f, state.statYear, state.statMonth) : (
+  ${state.ritten_view === 'kalender' ? renderKalender(f, state.statYear || new Date().getFullYear(), state.statMonth || (new Date().getMonth()+1)) : (
     f.length===0
       ? `<div class="empty-state"><div class="es-icon">📋</div>Geen ritten gevonden.</div>`
       : `<div class="trip-list">${f.map(renderTripItem).join('')}</div>`
