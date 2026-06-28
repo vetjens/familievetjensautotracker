@@ -1,0 +1,813 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Familie Vetjens Autotracker</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+
+  /* ── Header ── */
+  .header { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: white; padding: 20px 24px; display: flex; align-items: center; gap: 12px; }
+  .header h1 { font-size: 1.4rem; font-weight: 700; }
+  .sync-dot { width: 10px; height: 10px; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
+  .sync-dot.green  { background: #68d391; box-shadow: 0 0 6px #68d391; }
+  .sync-dot.orange { background: #f6ad55; box-shadow: 0 0 6px #f6ad55; }
+  .sync-dot.red    { background: #fc8181; box-shadow: 0 0 6px #fc8181; }
+  .sync-label { font-size: 0.72rem; opacity: 0.85; margin-left: 6px; }
+
+  /* ── Tabs ── */
+  .tabs { display: flex; background: white; border-bottom: 2px solid #e2e8f0; padding: 0 20px; overflow-x: auto; }
+  .tab { padding: 12px 18px; cursor: pointer; font-weight: 600; font-size: 0.85rem; color: #718096; border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s; }
+  .tab.active { color: #2b6cb0; border-bottom-color: #2b6cb0; }
+  .tab:hover:not(.active) { color: #4a5568; }
+
+  .content { padding: 20px; max-width: 960px; margin: 0 auto; }
+
+  /* ── Cards ── */
+  .car-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .car-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-left: 4px solid #cbd5e0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+  .car-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .car-card .car-icon { font-size: 2rem; margin-bottom: 8px; }
+  .car-card .car-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+  .car-card .car-km { font-size: 1.2rem; font-weight: 800; color: #2d3748; }
+  .car-card .car-km span { font-size: 0.75rem; font-weight: 500; color: #718096; }
+  .car-card .car-trips { font-size: 0.78rem; color: #718096; margin-top: 4px; }
+
+  /* ── Forms ── */
+  .form-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
+  .form-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: #2d3748; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-size: 0.78rem; font-weight: 600; color: #4a5568; text-transform: uppercase; letter-spacing: 0.04em; }
+  input[type=text], input[type=number], input[type=date], input[type=password], select, textarea {
+    padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; width: 100%;
+    transition: border-color 0.2s; background: white; color: #1a202c; font-family: inherit;
+  }
+  textarea { resize: vertical; min-height: 80px; font-size: 0.8rem; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: #2b6cb0; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-block; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 0.9rem; transition: all 0.2s; text-align: center; }
+  .btn-primary { background: #2b6cb0; color: white; }
+  .btn-primary:hover { background: #2c5282; }
+  .btn-ghost { background: #f7fafc; color: #4a5568; border: 1.5px solid #e2e8f0; }
+  .btn-ghost:hover { background: #edf2f7; }
+  .btn-block { width: 100%; margin-top: 10px; }
+  .btn-sm { padding: 5px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.15s; }
+  .btn-danger-sm { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+  .btn-danger-sm:hover { background: #fed7d7; }
+
+  /* ── Trips ── */
+  .trip-list { display: flex; flex-direction: column; gap: 10px; }
+  .trip-item { background: white; border-radius: 10px; padding: 13px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); display: flex; align-items: center; gap: 12px; transition: opacity 0.2s; }
+  .trip-item.checked-trip { opacity: 0.6; }
+  .trip-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; background: #cbd5e0; }
+  .trip-info { flex: 1; min-width: 0; }
+  .trip-dest { font-weight: 700; font-size: 0.95rem; }
+  .trip-meta { font-size: 0.78rem; color: #718096; margin-top: 2px; }
+  .trip-right { display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0; }
+  .km-val { font-weight: 800; font-size: 0.95rem; color: #2d3748; }
+  .km-diff { font-size: 0.75rem; color: #38a169; font-weight: 700; }
+  .vergoeding { font-size: 0.8rem; font-weight: 700; color: #744210; background: #fefcbf; padding: 2px 8px; border-radius: 999px; }
+  .badge { display: inline-block; padding: 2px 7px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; margin-left: 4px; }
+  .badge-prive { background: #ebf8ff; color: #2b6cb0; }
+  .badge-werk { background: #f0fff4; color: #276749; }
+  .badge-checked { background: #f0fff4; color: #276749; font-size: 0.68rem; padding: 2px 7px; border-radius: 999px; font-weight: 700; }
+  .badge-unchecked { background: #fff5f5; color: #c53030; font-size: 0.68rem; padding: 2px 7px; border-radius: 999px; font-weight: 700; }
+  .check-wrap { display: flex; align-items: center; cursor: pointer; flex-shrink: 0; }
+  .check-wrap input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: #38a169; flex-shrink: 0; }
+
+  /* ── Stats ── */
+  .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+  @media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
+  @media (max-width: 480px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat-card { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center; }
+  .stat-val { font-size: 1.4rem; font-weight: 800; color: #2b6cb0; }
+  .stat-label { font-size: 0.72rem; color: #718096; margin-top: 2px; font-weight: 600; }
+
+  /* ── Filters ── */
+  .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+  .filter-btn { padding: 6px 14px; border-radius: 999px; border: 1.5px solid #e2e8f0; background: white; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: #4a5568; transition: all 0.15s; }
+  .filter-btn.active { background: #2b6cb0; color: white; border-color: #2b6cb0; }
+
+  .section-title { font-size: 0.85rem; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+
+  /* ── Settings ── */
+  .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; flex-wrap: wrap; }
+  .driver-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+  .driver-stats { font-size: 0.78rem; color: #4a5568; background: #f7fafc; border-radius: 8px; padding: 8px 12px; margin-top: 6px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .driver-stat-item { display: flex; flex-direction: column; gap: 1px; }
+  .driver-stat-label { font-size: 0.68rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .driver-stat-val { font-weight: 800; color: #2d3748; font-size: 0.9rem; }
+  .tarief-box { display: flex; align-items: center; gap: 10px; padding: 14px; background: #fffbeb; border: 1.5px solid #f6e05e; border-radius: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .divider { border: none; border-top: 1px solid #e2e8f0; margin: 14px 0; }
+
+  /* ── Setup screen ── */
+  .setup-overlay { position: fixed; inset: 0; background: rgba(26,54,93,0.97); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+  .setup-box { background: white; border-radius: 16px; padding: 32px; max-width: 520px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
+  .setup-box h2 { font-size: 1.3rem; font-weight: 800; color: #1a365d; margin-bottom: 6px; }
+  .setup-box .subtitle { font-size: 0.85rem; color: #718096; margin-bottom: 24px; }
+  .setup-step { display: flex; gap: 12px; margin-bottom: 14px; padding: 12px; background: #f7fafc; border-radius: 10px; align-items: flex-start; }
+  .setup-step-num { width: 26px; height: 26px; border-radius: 50%; background: #2b6cb0; color: white; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .setup-step p { font-size: 0.83rem; color: #4a5568; line-height: 1.5; }
+  .setup-step p strong { color: #1a202c; }
+  .setup-step a { color: #2b6cb0; font-weight: 600; }
+  .setup-input-group { margin-bottom: 12px; }
+  .setup-input-group label { display: block; font-size: 0.78rem; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .setup-input-group input, .setup-input-group textarea { width: 100%; }
+  .setup-error { color: #c53030; font-size: 0.82rem; margin-top: 8px; display: none; }
+
+  /* ── Loading ── */
+  .loading-bar { text-align: center; padding: 60px 20px; color: #718096; }
+  .spinner { width: 36px; height: 36px; border: 4px solid #e2e8f0; border-top-color: #2b6cb0; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Firebase info box ── */
+  .info-box { padding: 12px 16px; border-radius: 10px; font-size: 0.82rem; margin-bottom: 16px; }
+  .info-box.blue { background: #ebf8ff; color: #2c5282; border: 1px solid #bee3f8; }
+  .info-box.green { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
+
+  .empty-state { text-align: center; padding: 30px 20px; color: #a0aec0; }
+  .empty-state .es-icon { font-size: 2.5rem; margin-bottom: 8px; }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+    .trip-item { flex-wrap: wrap; }
+    .trip-right { flex-direction: row; gap: 8px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════ SETUP OVERLAY ══ -->
+<div class="setup-overlay" id="setup-overlay" style="display:none;">
+  <div class="setup-box">
+    <h2>🔧 Firebase instellen</h2>
+    <p class="subtitle">Eenmalige setup — daarna werkt de app op alle apparaten met live sync.</p>
+
+    <div class="setup-step">
+      <div class="setup-step-num">1</div>
+      <p>Ga naar <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a> en maak een <strong>nieuw project</strong> aan (naam maakt niet uit, Analytics mag uit).</p>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">2</div>
+      <p>Klik in het project op <strong>Realtime Database</strong> (linkermenu) → <strong>Database aanmaken</strong> → kies <strong>testmodus</strong> → Klaar.</p>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">3</div>
+      <p>Klik bovenaan op het <strong>tandwiel ⚙️ → Projectinstellingen</strong>. Scroll naar <em>"Jouw apps"</em>, klik <strong>&lt;/&gt; (Web)</strong>, geef een naam en kopieer de <strong>firebaseConfig</strong>.</p>
+    </div>
+    <div class="setup-step">
+      <div class="setup-step-num">4</div>
+      <p>Plak hieronder de <strong>databaseURL</strong> (ziet eruit als <code>https://jouwproject-default-rtdb.firebaseio.com</code>) en de <strong>apiKey</strong>.</p>
+    </div>
+
+    <div class="setup-input-group">
+      <label>Database URL</label>
+      <input type="text" id="setup-dburl" placeholder="https://jouwproject-default-rtdb.firebaseio.com">
+    </div>
+    <div class="setup-input-group">
+      <label>API Key</label>
+      <input type="text" id="setup-apikey" placeholder="AIzaSy...">
+    </div>
+    <div class="setup-input-group">
+      <label>Project ID</label>
+      <input type="text" id="setup-projectid" placeholder="jouwproject-12345">
+    </div>
+
+    <p id="setup-error" class="setup-error">❌ Kan geen verbinding maken. Controleer de gegevens.</p>
+    <button class="btn btn-primary btn-block" onclick="connectFirebase()">🔗 Verbinden</button>
+    <button class="btn btn-ghost btn-block" style="margin-top:6px;" onclick="useLocalMode()">💾 Zonder sync (lokaal opslaan)</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ HEADER ══ -->
+<div class="header">
+  <span style="font-size:1.8rem;">🚗</span>
+  <div>
+    <h1>Familie Vetjens Autotracker</h1>
+    <div style="font-size:0.8rem;opacity:0.8;">Houd alle auto's bij op één plek</div>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+    <div class="sync-dot orange" id="sync-dot"></div>
+    <span class="sync-label" id="sync-label">Verbinden…</span>
+  </div>
+</div>
+
+<div class="tabs">
+  <div class="tab active"  onclick="showTab('overzicht')">🏠 Overzicht</div>
+  <div class="tab"         onclick="showTab('toevoegen')">➕ Rit toevoegen</div>
+  <div class="tab"         onclick="showTab('ritten')">📋 Alle ritten</div>
+  <div class="tab"         onclick="showTab('instellingen')">⚙️ Instellingen</div>
+</div>
+
+<div class="content" id="app">
+  <div class="loading-bar"><div class="spinner"></div>Laden…</div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════ SCRIPT ══ -->
+<script type="module">
+// ─── Firebase SDK (CDN) ──────────────────────────────────────────────────────
+import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, set, remove, update }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ─── CAR COLORS ─────────────────────────────────────────────────────────────
+const CAR_COLORS = ['#e53e3e','#d69e2e','#38a169','#805ad5','#2b6cb0','#dd6b20','#319795','#e53e7e'];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let db        = null;
+let dbRoot    = null;
+let localMode = false;
+
+const state = {
+  cars:          [],
+  drivers:       [],
+  trips:         [],
+  tarief:        0.20,
+  nextCarId:     1,
+  nextDriverId:  1,
+  nextTripId:    1,
+  // UI only (not synced)
+  activeTab:      'overzicht',
+  filterCarId:    'all',
+  filterChecked:  'all',
+  filterDriverId: 'all',
+};
+
+// Default data for first run
+const DEFAULT_CARS = [
+  { id: 1, name: "Auto 1", icon: "🚗", currentKm: 0 },
+  { id: 2, name: "Auto 2", icon: "🚙", currentKm: 0 },
+  { id: 3, name: "Auto 3", icon: "🛻", currentKm: 0 },
+  { id: 4, name: "Auto 4", icon: "🚕", currentKm: 0 },
+];
+const DEFAULT_DRIVERS = [
+  { id: 1, name: "Bestuurder 1", emoji: "👤", color: "#bee3f8" },
+  { id: 2, name: "Bestuurder 2", emoji: "👤", color: "#c6f6d5" },
+];
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function today()   { return new Date().toISOString().split('T')[0]; }
+function fmt(n)    { return Number(n).toLocaleString('nl-NL'); }
+function fmtEur(n) { return '€\u00A0' + Number(n).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function getCarById(id)    { return state.cars.find(c => c.id === id); }
+function getDriverById(id) { return state.drivers.find(d => d.id === id); }
+function carColor(carId) {
+  const idx = state.cars.findIndex(c => c.id === carId);
+  return CAR_COLORS[idx % CAR_COLORS.length] || '#cbd5e0';
+}
+
+// ─── SYNC STATUS ─────────────────────────────────────────────────────────────
+function setSyncStatus(status) {
+  const dot   = document.getElementById('sync-dot');
+  const label = document.getElementById('sync-label');
+  if (!dot || !label) return;
+  dot.className   = 'sync-dot ' + { online:'green', saving:'orange', offline:'red', local:'orange' }[status];
+  label.textContent = { online:'Live gesynchroniseerd', saving:'Opslaan…', offline:'Offline', local:'Lokaal opgeslagen' }[status];
+}
+
+// ─── FIREBASE / LOCAL STORAGE ────────────────────────────────────────────────
+const LS_KEY = 'vetjens_autotracker_v2';
+
+function saveLocal() {
+  const data = { cars: state.cars, drivers: state.drivers, trips: state.trips,
+    tarief: state.tarief, nextCarId: state.nextCarId, nextDriverId: state.nextDriverId, nextTripId: state.nextTripId };
+  localStorage.setItem(LS_KEY, JSON.stringify(data));
+  setSyncStatus('local');
+}
+
+function loadLocal() {
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const d = JSON.parse(raw);
+      Object.assign(state, { cars: d.cars||[], drivers: d.drivers||[], trips: d.trips||[],
+        tarief: d.tarief||0.20, nextCarId: d.nextCarId||1, nextDriverId: d.nextDriverId||1, nextTripId: d.nextTripId||1 });
+      if (!state.cars.length)    { state.cars    = DEFAULT_CARS;    state.nextCarId    = 5; }
+      if (!state.drivers.length) { state.drivers = DEFAULT_DRIVERS; state.nextDriverId = 3; }
+    } else {
+      state.cars    = DEFAULT_CARS;    state.nextCarId    = 5;
+      state.drivers = DEFAULT_DRIVERS; state.nextDriverId = 3;
+    }
+  } catch(e) {
+    state.cars = DEFAULT_CARS; state.nextCarId = 5;
+    state.drivers = DEFAULT_DRIVERS; state.nextDriverId = 3;
+  }
+}
+
+async function pushToFirebase() {
+  if (!db || localMode) { saveLocal(); return; }
+  setSyncStatus('saving');
+  try {
+    await set(dbRoot, {
+      cars:         state.cars,
+      drivers:      state.drivers,
+      trips:        state.trips,
+      tarief:       state.tarief,
+      nextCarId:    state.nextCarId,
+      nextDriverId: state.nextDriverId,
+      nextTripId:   state.nextTripId,
+    });
+    setSyncStatus('online');
+  } catch(e) {
+    console.error(e);
+    setSyncStatus('offline');
+    saveLocal(); // fallback
+  }
+}
+
+function subscribeFirebase() {
+  onValue(dbRoot, (snapshot) => {
+    const d = snapshot.val();
+    if (d) {
+      state.cars         = d.cars         || DEFAULT_CARS;
+      state.drivers      = d.drivers      || DEFAULT_DRIVERS;
+      state.trips        = d.trips        || [];
+      state.tarief       = d.tarief       ?? 0.20;
+      state.nextCarId    = d.nextCarId    || 5;
+      state.nextDriverId = d.nextDriverId || 3;
+      state.nextTripId   = d.nextTripId   || 1;
+    } else {
+      // First run — push defaults
+      state.cars    = DEFAULT_CARS;    state.nextCarId    = 5;
+      state.drivers = DEFAULT_DRIVERS; state.nextDriverId = 3;
+      pushToFirebase();
+    }
+    setSyncStatus('online');
+    render();
+  }, (error) => {
+    console.error('Firebase error:', error);
+    setSyncStatus('offline');
+  });
+}
+
+// ─── SETUP / CONNECT ─────────────────────────────────────────────────────────
+const FB_CONFIG_KEY = 'vetjens_fb_config';
+
+function loadSavedConfig() {
+  try { return JSON.parse(localStorage.getItem(FB_CONFIG_KEY)); } catch(e) { return null; }
+}
+function saveConfig(cfg) { localStorage.setItem(FB_CONFIG_KEY, JSON.stringify(cfg)); }
+
+async function connectFirebase() {
+  const dbUrl     = document.getElementById('setup-dburl').value.trim();
+  const apiKey    = document.getElementById('setup-apikey').value.trim();
+  const projectId = document.getElementById('setup-projectid').value.trim();
+  const errEl     = document.getElementById('setup-error');
+  errEl.style.display = 'none';
+
+  if (!dbUrl || !apiKey || !projectId) {
+    errEl.textContent = '❌ Vul alle drie de velden in.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  const cfg = { apiKey, databaseURL: dbUrl, projectId };
+  try {
+    const app = initializeApp(cfg, 'vetjens-' + Date.now());
+    db     = getDatabase(app);
+    dbRoot = ref(db, 'autotracker');
+    saveConfig(cfg);
+    document.getElementById('setup-overlay').style.display = 'none';
+    localMode = false;
+    subscribeFirebase();
+  } catch(e) {
+    errEl.textContent = '❌ Kan geen verbinding maken: ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+window.connectFirebase = connectFirebase;
+
+function useLocalMode() {
+  localMode = true;
+  document.getElementById('setup-overlay').style.display = 'none';
+  loadLocal();
+  setSyncStatus('local');
+  render();
+}
+window.useLocalMode = useLocalMode;
+
+async function tryAutoConnect() {
+  const cfg = loadSavedConfig();
+  if (!cfg) {
+    document.getElementById('setup-overlay').style.display = 'flex';
+    return;
+  }
+  try {
+    const app = initializeApp(cfg, 'vetjens-auto');
+    db     = getDatabase(app);
+    dbRoot = ref(db, 'autotracker');
+    localMode = false;
+    subscribeFirebase();
+  } catch(e) {
+    document.getElementById('setup-overlay').style.display = 'flex';
+  }
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────────────────────────
+function showTab(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['overzicht','toevoegen','ritten','instellingen'][i] === tab);
+  });
+  render();
+}
+window.showTab = showTab;
+
+// ─── TRIP ACTIONS ─────────────────────────────────────────────────────────────
+function submitAddTrip() {
+  const carId    = parseInt(document.getElementById('f-car').value);
+  const driverId = parseInt(document.getElementById('f-driver').value);
+  const dateVal  = document.getElementById('f-date').value;
+  const kmVal    = parseInt(document.getElementById('f-km').value);
+  const dest     = document.getElementById('f-dest').value.trim();
+  const goal     = document.getElementById('f-goal').value;
+
+  if (!dateVal)        { alert('Vul een datum in.'); return; }
+  if (isNaN(kmVal))    { alert('Vul een geldige km-stand in.'); return; }
+  if (!dest)           { alert('Vul een bestemming in.'); return; }
+
+  const car = getCarById(carId);
+  if (!car) { alert('Ongeldige auto geselecteerd.'); return; }
+
+  const prevKm = car.currentKm;
+  if (kmVal < prevKm) { alert(`De km-stand moet hoger zijn dan ${fmt(prevKm)} km.`); return; }
+
+  const diff = kmVal - prevKm;
+  const trip = {
+    id: state.nextTripId++,
+    carId, driverId, date: dateVal, km: kmVal, prevKm, diff,
+    vergoeding: +(diff * state.tarief).toFixed(2),
+    tariefSnapshot: state.tarief,
+    dest, goal, checked: false,
+  };
+
+  car.currentKm = kmVal;
+  state.trips.unshift(trip);
+  pushToFirebase();
+  showTab('ritten');
+}
+window.submitAddTrip = submitAddTrip;
+
+function deleteTrip(id) {
+  if (!confirm('Rit verwijderen?')) return;
+  const idx = state.trips.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  const trip = state.trips[idx];
+  const carTrips = state.trips.filter(t => t.carId === trip.carId);
+  if (carTrips[0].id === id) { const car = getCarById(trip.carId); if (car) car.currentKm = trip.prevKm; }
+  state.trips.splice(idx, 1);
+  pushToFirebase();
+  render();
+}
+window.deleteTrip = deleteTrip;
+
+function toggleChecked(id) {
+  const trip = state.trips.find(t => t.id === id);
+  if (!trip) return;
+  trip.checked = !trip.checked;
+  pushToFirebase();
+  render();
+}
+window.toggleChecked = toggleChecked;
+
+// ─── CAR ACTIONS ─────────────────────────────────────────────────────────────
+function addCar() {
+  const icons = ['🚗','🚙','🛻','🚕','🚓','🏎️','🚌','🚐'];
+  state.cars.push({ id: state.nextCarId++, name: `Auto ${state.cars.length+1}`, icon: icons[state.cars.length % icons.length], currentKm: 0 });
+  pushToFirebase(); render();
+}
+window.addCar = addCar;
+
+function removeCar(id) {
+  if (state.trips.some(t => t.carId === id) && !confirm('Deze auto heeft ritten. Toch verwijderen?')) return;
+  state.cars = state.cars.filter(c => c.id !== id);
+  pushToFirebase(); render();
+}
+window.removeCar = removeCar;
+
+function updateCar(id, key, val) {
+  const car = getCarById(id);
+  if (car) { car[key] = key === 'currentKm' ? (parseInt(val)||0) : val; pushToFirebase(); }
+}
+window.updateCar = updateCar;
+
+// ─── DRIVER ACTIONS ──────────────────────────────────────────────────────────
+function addDriver() {
+  const colors = ['#bee3f8','#c6f6d5','#fefcbf','#fed7e2','#e9d8fd','#feebc8'];
+  state.drivers.push({ id: state.nextDriverId++, name: `Bestuurder ${state.drivers.length+1}`, emoji: '👤', color: colors[state.drivers.length % colors.length] });
+  pushToFirebase(); render();
+}
+window.addDriver = addDriver;
+
+function removeDriver(id) {
+  if (state.trips.some(t => t.driverId === id) && !confirm('Deze bestuurder heeft ritten. Toch verwijderen?')) return;
+  state.drivers = state.drivers.filter(d => d.id !== id);
+  pushToFirebase(); render();
+}
+window.removeDriver = removeDriver;
+
+function updateDriver(id, key, val) {
+  const d = getDriverById(id);
+  if (d) { d[key] = val; pushToFirebase(); }
+}
+window.updateDriver = updateDriver;
+
+// ─── TARIEF ──────────────────────────────────────────────────────────────────
+function applyTarief() {
+  const v = parseFloat(document.getElementById('tarief-input').value);
+  if (isNaN(v) || v < 0) { alert('Vul een geldig tarief in.'); return; }
+  state.tarief = v;
+  pushToFirebase();
+  const note = document.getElementById('tarief-note');
+  if (note) { note.textContent = `✅ Nieuw tarief (${fmtEur(v)}/km) opgeslagen. Geldt voor nieuwe ritten.`; note.style.color = '#276749'; }
+}
+window.applyTarief = applyTarief;
+
+// ─── FILTER ──────────────────────────────────────────────────────────────────
+function setFilter(type, val) {
+  if (type === 'car')     state.filterCarId    = val;
+  if (type === 'checked') state.filterChecked  = val;
+  if (type === 'driver')  state.filterDriverId = val;
+  render();
+}
+window.setFilter = setFilter;
+
+// ─── RESET CONFIG ─────────────────────────────────────────────────────────────
+function resetConfig() {
+  if (!confirm('Firebase-configuratie verwijderen en opnieuw instellen?')) return;
+  localStorage.removeItem(FB_CONFIG_KEY);
+  location.reload();
+}
+window.resetConfig = resetConfig;
+
+// ─── RENDER: OVERVIEW ────────────────────────────────────────────────────────
+function renderOverview() {
+  const totalKm    = state.trips.reduce((a,t)=>a+t.diff,0);
+  const totalTrips = state.trips.length;
+  const privKm     = state.trips.filter(t=>t.goal==='prive').reduce((a,t)=>a+t.diff,0);
+  const werkKm     = state.trips.filter(t=>t.goal==='werk').reduce((a,t)=>a+t.diff,0);
+  const openCount  = state.trips.filter(t=>!t.checked).length;
+
+  const carCards = state.cars.map(c => {
+    const ct = state.trips.filter(t=>t.carId===c.id);
+    return `<div class="car-card" style="border-left-color:${carColor(c.id)};" onclick="showTab('toevoegen')">
+      <div class="car-icon">${c.icon}</div>
+      <div class="car-name">${c.name}</div>
+      <div class="car-km">${fmt(c.currentKm)} <span>km stand</span></div>
+      <div class="car-trips">${ct.length} rit${ct.length!==1?'ten':''}</div>
+    </div>`;
+  }).join('');
+
+  const recent = state.trips.length > 0
+    ? `<div class="section-title" style="margin-top:20px;">Laatste 5 ritten</div>
+       <div class="trip-list">${state.trips.slice(0,5).map(renderTripItem).join('')}</div>`
+    : `<div class="empty-state"><div class="es-icon">🛣️</div>Nog geen ritten geregistreerd.<br>Voeg je eerste rit toe!</div>`;
+
+  return `
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-val">${fmt(totalKm)}</div><div class="stat-label">Totaal km gereden</div></div>
+    <div class="stat-card"><div class="stat-val">${totalTrips}</div><div class="stat-label">Ritten geregistreerd</div></div>
+    <div class="stat-card"><div class="stat-val">${openCount}</div><div class="stat-label">Nog te controleren</div></div>
+    <div class="stat-card"><div class="stat-val">${fmt(privKm)}</div><div class="stat-label">Privé km</div></div>
+    <div class="stat-card"><div class="stat-val">${fmt(werkKm)}</div><div class="stat-label">Werk km</div></div>
+  </div>
+  <div class="section-title">Auto's</div>
+  <div class="car-grid">${carCards}</div>
+  ${recent}`;
+}
+
+// ─── RENDER: ADD TRIP ────────────────────────────────────────────────────────
+function renderAdd() {
+  if (!state.cars.length)    return `<div class="form-card"><div class="empty-state"><div class="es-icon">🚗</div>Voeg eerst een auto toe in <strong>Instellingen</strong>.</div><button class="btn btn-primary btn-block" onclick="showTab('instellingen')">Ga naar Instellingen</button></div>`;
+  if (!state.drivers.length) return `<div class="form-card"><div class="empty-state"><div class="es-icon">👤</div>Voeg eerst een bestuurder toe in <strong>Instellingen</strong>.</div><button class="btn btn-primary btn-block" onclick="showTab('instellingen')">Ga naar Instellingen</button></div>`;
+
+  return `<div class="form-card">
+    <h2>➕ Nieuwe rit toevoegen</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Auto</label>
+        <select id="f-car">${state.cars.map(c=>`<option value="${c.id}">${c.icon} ${c.name} (${fmt(c.currentKm)} km)</option>`).join('')}</select>
+      </div>
+      <div class="form-group">
+        <label>Datum</label>
+        <input type="date" id="f-date" value="${today()}">
+      </div>
+      <div class="form-group">
+        <label>Nieuwe km-stand</label>
+        <input type="number" id="f-km" placeholder="bijv. 45230" min="0">
+      </div>
+      <div class="form-group">
+        <label>Bestuurder</label>
+        <select id="f-driver">${state.drivers.map(d=>`<option value="${d.id}">${d.emoji} ${d.name}</option>`).join('')}</select>
+      </div>
+      <div class="form-group full">
+        <label>Bestemming</label>
+        <input type="text" id="f-dest" placeholder="bijv. Amsterdam, Supermarkt, Werk...">
+      </div>
+      <div class="form-group">
+        <label>Doel</label>
+        <select id="f-goal">
+          <option value="prive">🏠 Privé</option>
+          <option value="werk">💼 Werk</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:12px;padding:10px 12px;background:#fffbeb;border-radius:8px;font-size:0.82rem;color:#744210;border:1px solid #f6e05e;">
+      💡 Huidig vergoedingstarief: <strong>${fmtEur(state.tarief)}/km</strong> ·
+      <a href="#" onclick="showTab('instellingen');return false;" style="color:#744210;font-weight:700;">Aanpassen in Instellingen</a>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="submitAddTrip()">✅ Rit opslaan</button>
+  </div>`;
+}
+
+// ─── RENDER: TRIP ITEM ───────────────────────────────────────────────────────
+function renderTripItem(t) {
+  const car    = getCarById(t.carId);
+  const driver = getDriverById(t.driverId);
+  const color  = carColor(t.carId);
+  return `<div class="trip-item ${t.checked?'checked-trip':''}">
+    <label class="check-wrap" title="${t.checked?'Markeer als open':'Markeer als gecontroleerd'}">
+      <input type="checkbox" ${t.checked?'checked':''} onchange="toggleChecked(${t.id})">
+    </label>
+    <div class="trip-dot" style="background:${color};"></div>
+    <div class="trip-info">
+      <div class="trip-dest">${t.dest}
+        <span class="badge badge-${t.goal}">${t.goal==='prive'?'🏠 Privé':'💼 Werk'}</span>
+      </div>
+      <div class="trip-meta">${t.date} · ${car?car.icon+' '+car.name:'—'} · ${driver?driver.emoji+' '+driver.name:'—'} ·
+        ${t.checked?'<span class="badge-checked">✔ Gecontroleerd</span>':'<span class="badge-unchecked">○ Open</span>'}
+      </div>
+    </div>
+    <div class="trip-right">
+      <div class="km-val">${fmt(t.km)} km</div>
+      <div class="km-diff">+${fmt(t.diff)} km</div>
+      <div class="vergoeding">💶 ${fmtEur(t.vergoeding)}</div>
+    </div>
+    <button class="btn-sm btn-danger-sm" onclick="deleteTrip(${t.id})">🗑</button>
+  </div>`;
+}
+
+// ─── RENDER: ALL TRIPS ───────────────────────────────────────────────────────
+function renderTrips() {
+  let f = [...state.trips];
+  if (state.filterCarId    !== 'all') f = f.filter(t => t.carId    === parseInt(state.filterCarId));
+  if (state.filterDriverId !== 'all') f = f.filter(t => t.driverId === parseInt(state.filterDriverId));
+  if (state.filterChecked === 'open')    f = f.filter(t => !t.checked);
+  if (state.filterChecked === 'checked') f = f.filter(t =>  t.checked);
+
+  const totalKm   = f.reduce((a,t)=>a+t.diff,0);
+  const totalVerg = f.reduce((a,t)=>a+t.vergoeding,0);
+
+  const carBtns = state.cars.map(c=>
+    `<button class="filter-btn ${state.filterCarId==c.id?'active':''}" onclick="setFilter('car',${c.id})">${c.icon} ${c.name}</button>`
+  ).join('');
+
+  const driverOpts = state.drivers.map(d=>
+    `<option value="${d.id}" ${state.filterDriverId==d.id?'selected':''}>${d.emoji} ${d.name}</option>`
+  ).join('');
+
+  const summary = f.length > 0
+    ? `<div style="display:flex;gap:16px;margin-bottom:12px;font-size:0.82rem;color:#4a5568;font-weight:600;flex-wrap:wrap;">
+        <span>📊 ${f.length} rit${f.length!==1?'ten':''}</span>
+        <span>📍 ${fmt(totalKm)} km</span>
+        <span>💶 ${fmtEur(totalVerg)}</span>
+       </div>` : '';
+
+  return `
+  <div class="filter-bar">
+    <button class="filter-btn ${state.filterCarId==='all'?'active':''}" onclick="setFilter('car','all')">Alle auto's</button>
+    ${carBtns}
+  </div>
+  <div class="filter-bar">
+    <button class="filter-btn ${state.filterChecked==='all'?'active':''}"     onclick="setFilter('checked','all')">Alle statussen</button>
+    <button class="filter-btn ${state.filterChecked==='open'?'active':''}"    onclick="setFilter('checked','open')">○ Open</button>
+    <button class="filter-btn ${state.filterChecked==='checked'?'active':''}" onclick="setFilter('checked','checked')">✔ Gecontroleerd</button>
+    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+      <label style="font-size:0.78rem;font-weight:600;color:#4a5568;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">👤 Bestuurder</label>
+      <select onchange="setFilter('driver',this.value)"
+        style="padding:6px 10px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.82rem;font-weight:600;color:#4a5568;background:white;cursor:pointer;min-width:140px;">
+        <option value="all" ${state.filterDriverId==='all'?'selected':''}>Alle bestuurders</option>
+        ${driverOpts}
+      </select>
+    </div>
+  </div>
+  ${summary}
+  ${f.length===0
+    ? `<div class="empty-state"><div class="es-icon">📋</div>Geen ritten gevonden.</div>`
+    : `<div class="trip-list">${f.map(renderTripItem).join('')}</div>`}`;
+}
+
+// ─── RENDER: SETTINGS ────────────────────────────────────────────────────────
+function renderSettings() {
+  const syncMode = localMode
+    ? `<div class="info-box blue">💾 Je gebruikt <strong>lokale opslag</strong>. Gegevens zijn alleen op dit apparaat beschikbaar.
+        <br><button class="btn btn-sm btn-ghost" style="margin-top:8px;" onclick="resetConfig()">🔧 Firebase instellen</button></div>`
+    : `<div class="info-box green">🟢 <strong>Firebase actief</strong> — live sync tussen al je apparaten.
+        <br><button class="btn btn-sm btn-ghost" style="margin-top:8px;" onclick="resetConfig()">🔧 Opnieuw instellen</button></div>`;
+
+  const tariefSection = `
+  <div class="form-card">
+    <h2>💶 Km-vergoeding tarief</h2>
+    ${syncMode}
+    <div class="tarief-box">
+      <label>Vergoeding per km:</label>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <span style="font-weight:700;color:#744210;">€</span>
+        <input type="number" id="tarief-input" step="0.01" min="0" value="${state.tarief.toFixed(2)}"
+          style="width:90px;text-align:right;border-color:#f6e05e;">
+        <span style="color:#744210;font-weight:600;">per km</span>
+        <button class="btn btn-sm btn-ghost" onclick="applyTarief()" style="margin-left:4px;">Opslaan</button>
+      </div>
+    </div>
+    <p id="tarief-note" style="font-size:0.78rem;color:#a0aec0;">
+      💡 Het nieuwe tarief geldt alleen voor ritten die je <strong>na</strong> het opslaan toevoegt. Bestaande ritten blijven ongewijzigd.
+    </p>
+  </div>`;
+
+  const driverEmojis = ['👤','👩','👨','🧒','👴','👵','🧑','🧔','👦','👧'];
+  const driverRows = state.drivers.map(d => {
+    const dt   = state.trips.filter(t=>t.driverId===d.id);
+    const dKm  = dt.reduce((a,t)=>a+t.diff,0);
+    const dVrg = dt.reduce((a,t)=>a+t.vergoeding,0);
+    const emojis = driverEmojis.map(em=>
+      `<span style="cursor:pointer;font-size:1.1rem;padding:2px;border-radius:4px;${d.emoji===em?'outline:2px solid #2b6cb0;':''}"
+        onclick="updateDriver(${d.id},'emoji','${em}');render()">${em}</span>`
+    ).join('');
+    return `<div class="settings-row" style="flex-direction:column;align-items:stretch;">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <div class="driver-avatar" style="background:${d.color};">${d.emoji}</div>
+        <input type="text" value="${d.name}" onchange="updateDriver(${d.id},'name',this.value)" style="flex:1;min-width:100px;font-weight:600;" placeholder="Naam">
+        <input type="color" value="${d.color.startsWith('#')?d.color:'#bee3f8'}" onchange="updateDriver(${d.id},'color',this.value);render()"
+          title="Kleur" style="width:36px;height:36px;padding:2px;border:1.5px solid #e2e8f0;border-radius:6px;cursor:pointer;">
+        <button class="btn-sm btn-danger-sm" onclick="removeDriver(${d.id})">🗑 Verwijder</button>
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">${emojis}</div>
+      <div class="driver-stats">
+        <div class="driver-stat-item"><div class="driver-stat-label">Ritten</div><div class="driver-stat-val">${dt.length}</div></div>
+        <div class="driver-stat-item"><div class="driver-stat-label">Km gereden</div><div class="driver-stat-val">${fmt(dKm)} km</div></div>
+        <div class="driver-stat-item"><div class="driver-stat-label">Totale vergoeding</div><div class="driver-stat-val" style="color:#2b6cb0;">${fmtEur(dVrg)}</div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  const driversSection = `
+  <div class="form-card">
+    <h2>👤 Bestuurders</h2>
+    ${state.drivers.length===0?`<div class="empty-state" style="padding:16px;"><div class="es-icon">👤</div>Nog geen bestuurders.</div>`:driverRows}
+    <hr class="divider">
+    <button class="btn btn-ghost btn-block" onclick="addDriver()">➕ Bestuurder toevoegen</button>
+  </div>`;
+
+  const carIconOptions = ['🚗','🚙','🛻','🚕','🚓','🏎️','🚌','🚐'];
+  const carRows = state.cars.map(c => {
+    const color = carColor(c.id);
+    const icons = carIconOptions.map(em=>
+      `<span style="cursor:pointer;font-size:1.1rem;padding:2px;border-radius:4px;${c.icon===em?'outline:2px solid #2b6cb0;':''}"
+        onclick="updateCar(${c.id},'icon','${em}');render()">${em}</span>`
+    ).join('');
+    return `<div class="settings-row" style="border-left:4px solid ${color};">
+      <div style="font-size:1.5rem;flex-shrink:0;">${c.icon}</div>
+      <input type="text" value="${c.name}" onchange="updateCar(${c.id},'name',this.value)" style="flex:1;min-width:80px;font-weight:700;" placeholder="Auto naam">
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <label style="font-size:0.78rem;color:#718096;text-transform:none;letter-spacing:0;white-space:nowrap;">Begin km:</label>
+        <input type="number" value="${c.currentKm}" onchange="updateCar(${c.id},'currentKm',this.value)" style="width:90px;text-align:right;">
+      </div>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;">${icons}</div>
+      <button class="btn-sm btn-danger-sm" onclick="removeCar(${c.id})">🗑 Verwijder</button>
+    </div>`;
+  }).join('');
+
+  const carsSection = `
+  <div class="form-card">
+    <h2>🚗 Auto's</h2>
+    ${state.cars.length===0?`<div class="empty-state" style="padding:16px;"><div class="es-icon">🚗</div>Nog geen auto's.</div>`:carRows}
+    <hr class="divider">
+    <button class="btn btn-ghost btn-block" onclick="addCar()">➕ Auto toevoegen</button>
+  </div>`;
+
+  return tariefSection + driversSection + carsSection;
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function render() {
+  const app = document.getElementById('app');
+  switch (state.activeTab) {
+    case 'overzicht':    app.innerHTML = renderOverview();  break;
+    case 'toevoegen':    app.innerHTML = renderAdd();       break;
+    case 'ritten':       app.innerHTML = renderTrips();     break;
+    case 'instellingen': app.innerHTML = renderSettings();  break;
+  }
+}
+window.render = render;
+
+// ─── BOOT ────────────────────────────────────────────────────────────────────
+tryAutoConnect();
+</script>
+</body>
+</html>
