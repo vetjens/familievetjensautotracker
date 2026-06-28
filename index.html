@@ -2014,13 +2014,17 @@ function slaHuidigOverzichtOp() {
   const nu = new Date();
   const weekInfo = getWeekInfo(nu);
   const totaalAlles = perBestuurder.reduce((a,r)=>a+r.totaal,0);
+  const vandaag = nu.toISOString().split('T')[0];
 
   const historie = JSON.parse(localStorage.getItem('betaling_historie') || '[]');
-  historie.unshift({
+
+  // Vervang bestaand overzicht van dezelfde week+jaar, anders voeg toe
+  const bestaandIdx = historie.findIndex(h => h.weekNr === weekInfo.weekNr && h.jaar === weekInfo.jaar);
+  const nieuw = {
     weekNr: weekInfo.weekNr,
     jaar: weekInfo.jaar,
     label: weekInfo.label,
-    datum: nu.toISOString().split('T')[0],
+    datum: vandaag,
     perBestuurder: perBestuurder.map(r => ({
       naam: r.driver.emoji+' '+r.driver.name,
       ritten: r.ritten,
@@ -2028,9 +2032,16 @@ function slaHuidigOverzichtOp() {
       totaal: r.totaal
     })),
     totaalAlles,
-  });
-  localStorage.setItem('betaling_historie', JSON.stringify(historie.slice(0, 104)));
+  };
 
+  if (bestaandIdx >= 0) {
+    if (!confirm(`Er bestaat al een overzicht voor ${weekInfo.label}. Overschrijven?`)) return;
+    historie[bestaandIdx] = nieuw;
+  } else {
+    historie.unshift(nieuw);
+  }
+
+  localStorage.setItem('betaling_historie', JSON.stringify(historie.slice(0, 104)));
   alert(`✅ Overzicht opgeslagen voor ${weekInfo.label}`);
 }
 window.slaHuidigOverzichtOp = slaHuidigOverzichtOp;
@@ -2112,31 +2123,51 @@ window.toonBetalingOverzicht = toonBetalingOverzicht;
 function toonBetalingHistorie() {
   document.getElementById('betaling-overlay').style.display = 'none';
   const historie = JSON.parse(localStorage.getItem('betaling_historie') || '[]');
+  // Sorteer op jaar+week descending
+  historie.sort((a,b) => b.jaar !== a.jaar ? b.jaar - a.jaar : b.weekNr - a.weekNr);
   const box = document.getElementById('historie-content');
 
   if (historie.length === 0) {
     box.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="es-icon">📋</div>Nog geen overzichten opgeslagen.<br><span style="font-size:0.78rem;">Open een betalingsoverzicht en klik op "📸 Overzicht opslaan".</span></div>`;
   } else {
-    box.innerHTML = historie.map(h => `
-      <div style="border:1.5px solid #e2e8f0;border-radius:10px;padding:14px;margin-bottom:10px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div>
-            <div style="font-weight:700;font-size:0.9rem;">📅 ${h.label}</div>
-            <div style="font-size:0.72rem;color:#a0aec0;margin-top:1px;">Opgeslagen op ${h.datum}</div>
+    box.innerHTML = historie.map((h, idx) => `
+      <div style="border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:8px;overflow:hidden;">
+        <div onclick="toggleHistorieDetail(${idx})" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:white;transition:background 0.15s;" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='white'">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="font-size:0.9rem;">📅</span>
+            <div>
+              <div style="font-weight:700;font-size:0.88rem;">Week ${h.weekNr} · ${h.label.replace('Week '+h.weekNr+' ','')}</div>
+              <div style="font-size:0.71rem;color:#a0aec0;">Opgeslagen op ${h.datum}</div>
+            </div>
           </div>
-          <div style="font-size:1.1rem;font-weight:800;color:#1a365d;">${fmtEur(h.totaalAlles)}</div>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <strong style="color:#1a365d;">${fmtEur(h.totaalAlles)}</strong>
+            <span id="historie-arrow-${idx}" style="color:#a0aec0;font-size:0.8rem;">▼</span>
+          </div>
         </div>
-        ${h.perBestuurder.map(r => `
-          <div style="display:flex;justify-content:space-between;padding:6px 10px;background:#f7fafc;border-radius:7px;margin-bottom:4px;font-size:0.82rem;">
-            <span>${r.naam} <span style="color:#a0aec0;">· ${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</span></span>
-            <strong>${fmtEur(r.totaal)}</strong>
-          </div>`).join('')}
+        <div id="historie-detail-${idx}" style="display:none;padding:0 16px 12px;background:#fafafa;border-top:1px solid #e2e8f0;">
+          ${h.perBestuurder.map(r => `
+            <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:0.82rem;border-bottom:1px solid #f0f4f8;">
+              <span>${r.naam} <span style="color:#a0aec0;">· ${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</span></span>
+              <strong>${fmtEur(r.totaal)}</strong>
+            </div>`).join('')}
+        </div>
       </div>`).join('');
   }
 
   document.getElementById('historie-overlay').style.display = 'flex';
 }
 window.toonBetalingHistorie = toonBetalingHistorie;
+
+function toggleHistorieDetail(idx) {
+  const detail = document.getElementById(`historie-detail-${idx}`);
+  const arrow  = document.getElementById(`historie-arrow-${idx}`);
+  if (!detail) return;
+  const open = detail.style.display !== 'none';
+  detail.style.display = open ? 'none' : 'block';
+  if (arrow) arrow.textContent = open ? '▼' : '▲';
+}
+window.toggleHistorieDetail = toggleHistorieDetail;
 
 function sluitHistoriePopup() {
   document.getElementById('historie-overlay').style.display = 'none';
