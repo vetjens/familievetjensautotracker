@@ -4,6 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Familie Vetjens Autotracker</title>
+<link rel="manifest" id="pwa-manifest">
+<meta name="theme-color" content="#1a365d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Vetjens Autotracker">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
@@ -250,6 +255,7 @@
 </div>
 
 <!-- ══════════════════════════════════════════════════════════ SCRIPT ══ -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script type="module">
 // ─── Firebase SDK (CDN) ──────────────────────────────────────────────────────
 import { initializeApp }         from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -279,6 +285,16 @@ const state = {
   filterDriverId: 'all',
   editTripId: null,
   statPeriod: 'maand',
+  searchQuery: '',
+  ritten_view: 'lijst',  // 'lijst' of 'kalender'
+  favBestemmingen: [],
+  categories: [
+    { id: 'prive', label: 'Privé', icon: '🏠', color: '#ebf8ff', textColor: '#2b6cb0' },
+    { id: 'werk',  label: 'Werk',  icon: '💼', color: '#f0fff4', textColor: '#276749' },
+  ],
+  nextCatId: 3,
+  terugkerendeRitten: [],
+  nextTerugkerendId: 1,
   statYear: new Date().getFullYear(),
   statMonth: new Date().getMonth() + 1,
   statWeek: null,
@@ -302,6 +318,12 @@ function fmt(n)    { return Number(n).toLocaleString('nl-NL'); }
 function fmtEur(n) { return '€\u00A0' + Number(n).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function getCarById(id)    { return state.cars.find(c => c.id === id); }
 function getDriverById(id) { return state.drivers.find(d => d.id === id); }
+function co2ForTrip(t) {
+  const car = getCarById(t.carId);
+  const g = car && car.co2PerKm ? car.co2PerKm : 120;
+  return +(t.diff * g / 1000).toFixed(2); // kg CO2
+}
+
 function carColor(carId) {
   const idx = state.cars.findIndex(c => c.id === carId);
   return CAR_COLORS[idx % CAR_COLORS.length] || '#cbd5e0';
@@ -350,13 +372,18 @@ async function pushToFirebase() {
   setSyncStatus('saving');
   try {
     await set(dbRoot, {
-      cars:         state.cars,
-      drivers:      state.drivers,
-      trips:        state.trips,
-      tarief:       state.tarief,
-      nextCarId:    state.nextCarId,
-      nextDriverId: state.nextDriverId,
-      nextTripId:   state.nextTripId,
+      cars:                state.cars,
+      drivers:             state.drivers,
+      trips:               state.trips,
+      tarief:              state.tarief,
+      nextCarId:           state.nextCarId,
+      nextDriverId:        state.nextDriverId,
+      nextTripId:          state.nextTripId,
+      categories:          state.categories,
+      favBestemmingen:     state.favBestemmingen,
+      terugkerendeRitten:  state.terugkerendeRitten,
+      nextCatId:           state.nextCatId,
+      nextTerugkerendId:   state.nextTerugkerendId,
     });
     setSyncStatus('online');
   } catch(e) {
@@ -373,10 +400,15 @@ function subscribeFirebase() {
       state.cars         = d.cars         || DEFAULT_CARS;
       state.drivers      = d.drivers      || DEFAULT_DRIVERS;
       state.trips        = d.trips        || [];
-      state.tarief       = d.tarief       ?? 0.20;
-      state.nextCarId    = d.nextCarId    || 5;
-      state.nextDriverId = d.nextDriverId || 3;
-      state.nextTripId   = d.nextTripId   || 1;
+      state.tarief             = d.tarief             ?? 0.20;
+      state.nextCarId          = d.nextCarId          || 5;
+      state.nextDriverId       = d.nextDriverId       || 3;
+      state.nextTripId         = d.nextTripId         || 1;
+      state.categories         = d.categories         || state.categories;
+      state.favBestemmingen    = d.favBestemmingen    || [];
+      state.terugkerendeRitten = d.terugkerendeRitten || [];
+      state.nextCatId          = d.nextCatId          || 3;
+      state.nextTerugkerendId  = d.nextTerugkerendId  || 1;
     } else {
       // First run — push defaults
       state.cars    = DEFAULT_CARS;    state.nextCarId    = 5;
@@ -516,6 +548,8 @@ function submitAddTrip() {
   const dateVal  = document.getElementById('f-date').value;
   const dest     = document.getElementById('f-dest').value.trim();
   const goal     = document.getElementById('f-goal').value;
+  const notitie  = document.getElementById('f-notitie')?.value.trim() || '';
+  const route    = document.getElementById('f-route')?.value.trim() || '';
 
   if (!dateVal) { alert('Vul een datum in.'); return; }
   if (!dest)    { alert('Vul een bestemming in.'); return; }
@@ -545,11 +579,12 @@ function submitAddTrip() {
     km: eindKmVal, prevKm: beginKmVal, diff,
     vergoeding: +(diff * state.tarief).toFixed(2),
     tariefSnapshot: state.tarief,
-    dest, goal, checked: false,
+    dest, goal, notitie, route, checked: false,
   };
 
   if (eindKmVal > car.currentKm) car.currentKm = eindKmVal;
   state.trips.unshift(trip);
+  if (dest) slaFavBestOp(dest);
   pushToFirebase();
   showTab('ritten');
 }
@@ -617,6 +652,78 @@ function submitEditTrip() {
 }
 window.submitEditTrip = submitEditTrip;
 
+// ── FEATURE 7: Vaste ritten ──
+function slaVasteRitOp() {
+  const carId    = parseInt(document.getElementById('f-car')?.value);
+  const driverId = parseInt(document.getElementById('f-driver')?.value);
+  const dest     = document.getElementById('f-dest')?.value.trim();
+  const goal     = document.getElementById('f-goal')?.value;
+  const notitie  = document.getElementById('f-notitie')?.value.trim() || '';
+  const route    = document.getElementById('f-route')?.value.trim() || '';
+  if (!dest) { alert('Vul eerst een bestemming in.'); return; }
+  state.terugkerendeRitten.push({ id: state.nextTerugkerendId++, carId, driverId, dest, goal, notitie, route });
+  pushToFirebase();
+  render();
+}
+window.slaVasteRitOp = slaVasteRitOp;
+
+function gebruikVasteRit(id) {
+  const r = state.terugkerendeRitten.find(x=>x.id===id);
+  if (!r) return;
+  setTimeout(() => {
+    const carSel = document.getElementById('f-car');
+    const drvSel = document.getElementById('f-driver');
+    const destInp = document.getElementById('f-dest');
+    const goalSel = document.getElementById('f-goal');
+    const notInp  = document.getElementById('f-notitie');
+    const rouInp  = document.getElementById('f-route');
+    if (carSel)  carSel.value  = r.carId;
+    if (drvSel)  drvSel.value  = r.driverId;
+    if (destInp) destInp.value = r.dest;
+    if (goalSel) goalSel.value = r.goal;
+    if (notInp)  notInp.value  = r.notitie || '';
+    if (rouInp)  rouInp.value  = r.route   || '';
+    prefillCarKm();
+  }, 50);
+}
+window.gebruikVasteRit = gebruikVasteRit;
+
+function verwijderVasteRit(id) {
+  state.terugkerendeRitten = state.terugkerendeRitten.filter(x=>x.id!==id);
+  pushToFirebase(); render();
+}
+window.verwijderVasteRit = verwijderVasteRit;
+
+// ── FEATURE 24: Favoriete bestemmingen ──
+function filterFavBest(val) {
+  const box = document.getElementById('fav-suggestions');
+  if (!box) return;
+  if (!val || val.length < 1) { box.style.display = 'none'; return; }
+  const matches = state.favBestemmingen.filter(b => b.toLowerCase().includes(val.toLowerCase()));
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.innerHTML = matches.map(b =>
+    `<div onclick="kiesBestemming('${b.replace(/'/g,"\'")}') " style="padding:8px 12px;cursor:pointer;font-size:0.85rem;border-bottom:1px solid #f0f4f8;"
+      onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='white'">${b}</div>`
+  ).join('');
+  box.style.display = 'block';
+}
+window.filterFavBest = filterFavBest;
+
+function kiesBestemming(val) {
+  const inp = document.getElementById('f-dest');
+  const box = document.getElementById('fav-suggestions');
+  if (inp) inp.value = val;
+  if (box) box.style.display = 'none';
+}
+window.kiesBestemming = kiesBestemming;
+
+function slaFavBestOp(dest) {
+  if (!dest || state.favBestemmingen.includes(dest)) return;
+  state.favBestemmingen.push(dest);
+  pushToFirebase();
+}
+
+// Auto-opslaan favoriete bestemming bij opslaan rit
 function cancelEdit() {
   state.editTripId = null;
   showTab('ritten');
@@ -648,7 +755,7 @@ window.toggleChecked = toggleChecked;
 // ─── CAR ACTIONS ─────────────────────────────────────────────────────────────
 function addCar() {
   const icons = ['🚗','🚙','🛻','🚕','🚓','🏎️','🚌','🚐'];
-  state.cars.push({ id: state.nextCarId++, name: `Auto ${state.cars.length+1}`, icon: icons[state.cars.length % icons.length], currentKm: 0 });
+  state.cars.push({ id: state.nextCarId++, name: `Auto ${state.cars.length+1}`, icon: icons[state.cars.length % icons.length], currentKm: 0, co2PerKm: 120 });
   pushToFirebase(); render();
 }
 window.addCar = addCar;
@@ -699,6 +806,37 @@ function applyTarief() {
 window.applyTarief = applyTarief;
 
 // ─── FILTER ──────────────────────────────────────────────────────────────────
+// ── Categorie functies ──
+function addCat() {
+  const id = 'cat_' + state.nextCatId++;
+  state.categories.push({ id, label: 'Nieuw', icon: '🏷️', color: '#f7fafc', textColor: '#4a5568' });
+  pushToFirebase(); render();
+}
+window.addCat = addCat;
+function removeCat(id) {
+  if (state.trips.some(t=>t.goal===id) && !confirm('Er zijn ritten met deze categorie. Toch verwijderen?')) return;
+  state.categories = state.categories.filter(c=>c.id!==id);
+  pushToFirebase(); render();
+}
+window.removeCat = removeCat;
+function updateCat(id, key, val) {
+  const cat = state.categories.find(c=>c.id===id);
+  if (cat) { cat[key] = val; pushToFirebase(); }
+}
+window.updateCat = updateCat;
+
+// ── Favoriete bestemmingen beheer ──
+function verwijderFavBest(idx) {
+  state.favBestemmingen.splice(idx, 1);
+  pushToFirebase(); render();
+}
+window.verwijderFavBest = verwijderFavBest;
+function voegFavBestToe() {
+  const naam = prompt('Naam van de bestemming:');
+  if (naam && naam.trim()) { slaFavBestOp(naam.trim()); render(); }
+}
+window.voegFavBestToe = voegFavBestToe;
+
 function setFilter(type, val) {
   if (type === 'car')     state.filterCarId    = val;
   if (type === 'checked') state.filterChecked  = val;
@@ -714,6 +852,53 @@ function resetConfig() {
   location.reload();
 }
 window.resetConfig = resetConfig;
+
+// ── FEATURE 19: Backup ──
+function maakBackup() {
+  const data = {
+    exportDatum: new Date().toLocaleDateString('nl-NL'),
+    auto: state.cars,
+    bestuurders: state.drivers,
+    ritten: state.trips,
+    tarief: state.tarief,
+  };
+  const json   = JSON.stringify(data, null, 2);
+  const blob   = new Blob([json], { type: 'application/json' });
+  const url    = URL.createObjectURL(blob);
+  const a      = document.createElement('a');
+  a.href       = url;
+  a.download   = `vetjens_autotracker_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+window.maakBackup = maakBackup;
+
+function herstelBackup() {
+  const input = document.createElement('input');
+  input.type  = 'file';
+  input.accept = '.json';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const d = JSON.parse(ev.target.result);
+        if (!confirm(`Backup van ${d.exportDatum} herstellen? Huidige data wordt overschreven.`)) return;
+        if (d.auto)        state.cars    = d.auto;
+        if (d.bestuurders) state.drivers = d.bestuurders;
+        if (d.ritten)      state.trips   = d.ritten;
+        if (d.tarief)      state.tarief  = d.tarief;
+        pushToFirebase();
+        alert('✅ Backup hersteld!');
+        render();
+      } catch(err) { alert('❌ Ongeldig backup-bestand.'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+window.herstelBackup = herstelBackup;
 
 // ─── RENDER: OVERVIEW ────────────────────────────────────────────────────────
 function renderOverview() {
@@ -798,14 +983,24 @@ function renderAdd() {
       </div>
       <div class="form-group full">
         <label>Bestemming</label>
-        <input type="text" id="f-dest" placeholder="bijv. Amsterdam, Supermarkt, Werk...">
+        <div style="position:relative;">
+          <input type="text" id="f-dest" placeholder="bijv. Amsterdam, Supermarkt, Werk..." oninput="filterFavBest(this.value)" autocomplete="off">
+          <div id="fav-suggestions" style="position:absolute;top:100%;left:0;right:0;background:white;border:1.5px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;display:none;max-height:180px;overflow-y:auto;"></div>
+        </div>
       </div>
       <div class="form-group">
-        <label>Doel</label>
+        <label>Route (optioneel)</label>
+        <input type="text" id="f-route" placeholder="bijv. A2 via Utrecht">
+      </div>
+      <div class="form-group">
+        <label>Doel / Categorie</label>
         <select id="f-goal">
-          <option value="prive">🏠 Privé</option>
-          <option value="werk">💼 Werk</option>
+          ${state.categories.map(c=>`<option value="${c.id}">${c.icon} ${c.label}</option>`).join('')}
         </select>
+      </div>
+      <div class="form-group full">
+        <label>Notitie (optioneel)</label>
+        <input type="text" id="f-notitie" placeholder="bijv. snelweg dicht, omgereden...">
       </div>
     </div>
 
@@ -851,6 +1046,24 @@ function renderAdd() {
       <a href="#" onclick="showTab('instellingen');return false;" style="color:#744210;font-weight:700;">Aanpassen in Instellingen</a>
     </div>
     <button class="btn btn-primary btn-block" onclick="submitAddTrip()">✅ Rit opslaan</button>
+
+    ${state.terugkerendeRitten.length > 0 ? `
+    <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0;">
+    <div style="font-size:0.82rem;font-weight:700;color:#4a5568;margin-bottom:8px;">📅 Snel toevoegen uit vaste ritten</div>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      ${state.terugkerendeRitten.map(r => {
+        const d = state.drivers.find(x=>x.id===r.driverId);
+        const c = state.cars.find(x=>x.id===r.carId);
+        const cat = state.categories.find(x=>x.id===r.goal);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f7fafc;border-radius:8px;border:1px solid #e2e8f0;">
+          <div style="flex:1;font-size:0.82rem;"><strong>${r.dest}</strong> <span style="color:#718096;">· ${d?d.name:'?'} · ${c?c.icon+' '+c.name:'?'} · ${cat?cat.icon+' '+cat.label:'?'}</span></div>
+          <button class="btn-sm btn-ghost" onclick="gebruikVasteRit(${r.id})" style="white-space:nowrap;">↩ Gebruik</button>
+          <button class="btn-sm btn-danger-sm" onclick="verwijderVasteRit(${r.id})">🗑</button>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+
+    <button class="btn btn-ghost btn-block" style="margin-top:10px;font-size:0.82rem;" onclick="slaVasteRitOp()">📌 Huidige invulling opslaan als vaste rit</button>
   </div>`;
 }
 
@@ -871,7 +1084,8 @@ function renderTripItem(t) {
     <label class="check-wrap"><input type="checkbox" ${t.checked?'checked':''} onchange="toggleChecked(${t.id})"></label>
     <div class="trip-dot" style="background:${dotColor};"></div>
     <div class="driver-chip" style="background:${driverColor};">${driverEmoji}</div>
-    <div class="t-dest">${t.dest}</div>
+    <div class="t-dest">${t.dest}${t.notitie?`<span style="font-size:0.7rem;color:#a0aec0;font-weight:400;margin-left:6px;">📝 ${t.notitie}</span>`:''}${t.route?`<span style="font-size:0.7rem;color:#a0aec0;font-weight:400;margin-left:6px;">🗺️ ${t.route}</span>`:''}
+    </div>
     <div class="t-goal">${goalBadge}</div>
     <div class="t-date">${t.date}</div>
     <div class="t-driver">${driverName}</div>
@@ -880,6 +1094,7 @@ function renderTripItem(t) {
     <div class="t-km">
       <div class="km-diff">+${fmt(t.diff)} km</div>
       <div class="vergoeding">💶 ${fmtEur(t.vergoeding)}</div>
+      <div style="font-size:0.68rem;color:#276749;white-space:nowrap;">🌿 ${co2ForTrip(t)} kg CO₂</div>
     </div>
     <button class="btn-sm btn-edit-sm" onclick="openEditTrip(${t.id})" style="flex-shrink:0;" title="Bewerken">✏️</button>
     <button class="btn-sm btn-danger-sm" onclick="deleteTrip(${t.id})" style="flex-shrink:0;" title="Verwijderen">🗑</button>
@@ -893,6 +1108,18 @@ function renderTrips() {
   if (state.filterDriverId !== 'all') f = f.filter(t => t.driverId === parseInt(state.filterDriverId));
   if (state.filterChecked === 'open')    f = f.filter(t => !t.checked);
   if (state.filterChecked === 'checked') f = f.filter(t =>  t.checked);
+  if (state.searchQuery) {
+    const q = state.searchQuery.toLowerCase();
+    f = f.filter(t => {
+      const car    = getCarById(t.carId);
+      const driver = getDriverById(t.driverId);
+      return (t.dest       || '').toLowerCase().includes(q)
+          || (t.notitie    || '').toLowerCase().includes(q)
+          || (car?.name    || '').toLowerCase().includes(q)
+          || (driver?.name || '').toLowerCase().includes(q)
+          || (t.date       || '').includes(q);
+    });
+  }
 
   const totalKm   = f.reduce((a,t)=>a+t.diff,0);
   const totalVerg = f.reduce((a,t)=>a+t.vergoeding,0);
@@ -913,6 +1140,13 @@ function renderTrips() {
        </div>` : '';
 
   return `
+  <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
+    <input type="text" placeholder="🔍 Zoek op bestemming, bestuurder, auto..." value="${state.searchQuery}"
+      oninput="state.searchQuery=this.value;render()"
+      style="flex:1;padding:9px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.88rem;">
+    <button class="filter-btn ${state.ritten_view==='lijst'?'active':''}" onclick="state.ritten_view='lijst';render()">☰ Lijst</button>
+    <button class="filter-btn ${state.ritten_view==='kalender'?'active':''}" onclick="state.ritten_view='kalender';render()">📅 Kalender</button>
+  </div>
   <div class="filter-bar">
     <button class="filter-btn ${state.filterCarId==='all'?'active':''}" onclick="setFilter('car','all')">Alle auto's</button>
     ${carBtns}
@@ -931,9 +1165,11 @@ function renderTrips() {
     </div>
   </div>
   ${summary}
-  ${f.length===0
-    ? `<div class="empty-state"><div class="es-icon">📋</div>Geen ritten gevonden.</div>`
-    : `<div class="trip-list">${f.map(renderTripItem).join('')}</div>`}`;
+  ${state.ritten_view === 'kalender' ? renderKalender(f, state.statYear, state.statMonth) : (
+    f.length===0
+      ? `<div class="empty-state"><div class="es-icon">📋</div>Geen ritten gevonden.</div>`
+      : `<div class="trip-list">${f.map(renderTripItem).join('')}</div>`
+  )}`;
 }
 
 // ─── RENDER: SETTINGS ────────────────────────────────────────────────────────
@@ -943,6 +1179,16 @@ function renderSettings() {
         <br><button class="btn btn-sm btn-ghost" style="margin-top:8px;" onclick="resetConfig()">🔧 Firebase instellen</button></div>`
     : `<div class="info-box green">🟢 <strong>Firebase actief</strong> — live sync tussen al je apparaten.
         <br><button class="btn btn-sm btn-ghost" style="margin-top:8px;" onclick="resetConfig()">🔧 Opnieuw instellen</button></div>`;
+
+  const backupSection = `
+  <div class="form-card">
+    <h2>🔄 Backup & herstel</h2>
+    <p style="font-size:0.82rem;color:#718096;margin-bottom:14px;">Download een backup van alle gegevens of herstel een eerdere backup.</p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-primary" style="flex:1;" onclick="maakBackup()">⬇️ Backup downloaden</button>
+      <button class="btn btn-ghost" style="flex:1;" onclick="herstelBackup()">⬆️ Backup herstellen</button>
+    </div>
+  </div>`;
 
   const tariefSection = `
   <div class="form-card">
@@ -1011,6 +1257,10 @@ function renderSettings() {
         <label style="font-size:0.78rem;color:#718096;text-transform:none;letter-spacing:0;white-space:nowrap;">Begin km:</label>
         <input type="number" value="${c.currentKm}" onchange="updateCar(${c.id},'currentKm',this.value)" style="width:90px;text-align:right;">
       </div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        <label style="font-size:0.78rem;color:#718096;text-transform:none;letter-spacing:0;white-space:nowrap;">🌿 g CO₂/km:</label>
+        <input type="number" value="${c.co2PerKm||120}" onchange="updateCar(${c.id},'co2PerKm',parseInt(this.value)||120)" style="width:70px;text-align:right;" min="0" max="500">
+      </div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;">${icons}</div>
       <button class="btn-sm btn-danger-sm" onclick="removeCar(${c.id})">🗑 Verwijder</button>
     </div>`;
@@ -1024,9 +1274,120 @@ function renderSettings() {
     <button class="btn btn-ghost btn-block" onclick="addCar()">➕ Auto toevoegen</button>
   </div>`;
 
-  return tariefSection + driversSection + carsSection;
+  // ── Categorieën ──
+  const catRows = state.categories.map(cat => `
+    <div class="settings-row" style="gap:8px;">
+      <input type="text" value="${cat.icon}" onchange="updateCat('${cat.id}','icon',this.value)"
+        style="width:48px;text-align:center;font-size:1.2rem;padding:6px;">
+      <input type="text" value="${cat.label}" onchange="updateCat('${cat.id}','label',this.value)"
+        style="flex:1;font-weight:600;">
+      <input type="color" value="${cat.color}" onchange="updateCat('${cat.id}','color',this.value)"
+        title="Achtergrondkleur" style="width:36px;height:36px;padding:2px;border:1.5px solid #e2e8f0;border-radius:6px;cursor:pointer;">
+      ${cat.id !== 'prive' && cat.id !== 'werk' ? `<button class="btn-sm btn-danger-sm" onclick="removeCat('${cat.id}')">🗑 Verwijder</button>` : '<span style="font-size:0.72rem;color:#a0aec0;">Standaard</span>'}
+    </div>`).join('');
+
+  const catsSection = `
+  <div class="form-card">
+    <h2>🏷️ Categorieën</h2>
+    ${catRows}
+    <hr class="divider">
+    <button class="btn btn-ghost btn-block" onclick="addCat()">➕ Categorie toevoegen</button>
+  </div>`;
+
+  // ── Favoriete bestemmingen ──
+  const favSection = state.favBestemmingen.length === 0 ? '' : `
+  <div class="form-card">
+    <h2>📍 Favoriete bestemmingen</h2>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      ${state.favBestemmingen.map((b,i) => `
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f7fafc;border-radius:8px;">
+          <span style="flex:1;font-size:0.85rem;">📍 ${b}</span>
+          <button class="btn-sm btn-danger-sm" onclick="verwijderFavBest(${i})">🗑</button>
+        </div>`).join('')}
+    </div>
+    <hr class="divider">
+    <button class="btn btn-ghost btn-block" onclick="voegFavBestToe()">➕ Bestemming toevoegen</button>
+  </div>`;
+
+  return backupSection + tariefSection + driversSection + carsSection + catsSection + favSection;
 }
 
+
+// ─── FEATURE 27: KALENDER ────────────────────────────────────────────────────
+function renderKalender(trips, year, month) {
+  const maandNamen = ['Januari','Februari','Maart','April','Mei','Juni','Juli','Augustus','September','Oktober','November','December'];
+  const y = year || new Date().getFullYear();
+  const m = month || (new Date().getMonth() + 1);
+
+  const eerstedag = new Date(y, m-1, 1).getDay(); // 0=zo
+  const startdag  = eerstedag === 0 ? 6 : eerstedag - 1; // maandag = 0
+  const dagenInMaand = new Date(y, m, 0).getDate();
+
+  // Ritten per dag
+  const perDag = {};
+  trips.forEach(t => {
+    const [ty, tm, td] = t.date.split('-').map(Number);
+    if (ty === y && tm === m) {
+      const key = td;
+      if (!perDag[key]) perDag[key] = [];
+      perDag[key].push(t);
+    }
+  });
+
+  const dagHeaders = ['Ma','Di','Wo','Do','Vr','Za','Zo'].map(d =>
+    `<div style="text-align:center;font-size:0.72rem;font-weight:700;color:#718096;padding:4px;">${d}</div>`
+  ).join('');
+
+  let cells = '';
+  for (let i = 0; i < startdag; i++) cells += `<div></div>`;
+  for (let d = 1; d <= dagenInMaand; d++) {
+    const ritten = perDag[d] || [];
+    const isVandaag = new Date().getDate()===d && new Date().getMonth()+1===m && new Date().getFullYear()===y;
+    const dots = ritten.slice(0,3).map(t => {
+      const color = carColor(t.carId);
+      return `<div style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0;"></div>`;
+    }).join('');
+    const totKm = ritten.reduce((a,t)=>a+t.diff,0);
+    cells += `<div onclick="kalenderDagKlik(${y},${m},${d})" style="border:1.5px solid ${isVandaag?'#2b6cb0':'#e2e8f0'};border-radius:8px;padding:6px;cursor:pointer;min-height:64px;background:${ritten.length?'white':'#fafafa'};transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:0.78rem;font-weight:${isVandaag?'800':'600'};color:${isVandaag?'#2b6cb0':'#2d3748'};">${d}</div>
+      ${ritten.length ? `<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px;">${dots}</div><div style="font-size:0.65rem;color:#718096;margin-top:2px;">${totKm} km</div>` : ''}
+    </div>`;
+  }
+
+  return `<div style="background:white;border-radius:12px;padding:16px;box-shadow:0 1px 4px rgba(0,0,0,0.08);">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+      <button class="filter-btn" onclick="kalenderMaand(-1)">◀</button>
+      <div style="flex:1;text-align:center;font-weight:700;font-size:1rem;">${maandNamen[m-1]} ${y}</div>
+      <button class="filter-btn" onclick="kalenderMaand(1)">▶</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;">${dagHeaders}</div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;">${cells}</div>
+  </div>
+  <div id="kalender-dag-ritten" style="margin-top:12px;"></div>`;
+}
+window.renderKalender = renderKalender;
+
+function kalenderMaand(dir) {
+  let m = state.statMonth + dir;
+  let y = state.statYear;
+  if (m < 1)  { m = 12; y--; }
+  if (m > 12) { m = 1;  y++; }
+  state.statMonth = m;
+  state.statYear  = y;
+  render();
+}
+window.kalenderMaand = kalenderMaand;
+
+function kalenderDagKlik(y, m, d) {
+  const datumsStr = `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+  const dagRitten = state.trips.filter(t => t.date === datumsStr);
+  const box = document.getElementById('kalender-dag-ritten');
+  if (!box) return;
+  if (!dagRitten.length) { box.innerHTML = ''; return; }
+  box.innerHTML = `<div class="section-title" style="margin-bottom:8px;">Ritten op ${d}-${m}-${y}</div>
+    <div class="trip-list">${dagRitten.map(renderTripItem).join('')}</div>`;
+}
+window.kalenderDagKlik = kalenderDagKlik;
 
 // ─── STATISTIEKEN HELPERS ────────────────────────────────────────────────────
 function getWeekNumber(dateStr) {
@@ -1252,6 +1613,58 @@ function renderStatistieken() {
   </div>`;
 
   // ── Totalen samenvatting ──
+  // Grafiek data
+  const maanden = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Aug','Sep','Okt','Nov','Dec'];
+  const kmPerMaand = Array(12).fill(0);
+  const vergPerMaand = Array(12).fill(0);
+  state.trips.filter(t => parseInt(t.date.split('-')[0]) === state.statYear).forEach(t => {
+    const m = parseInt(t.date.split('-')[1]) - 1;
+    kmPerMaand[m]   += t.diff;
+    vergPerMaand[m] += t.vergoeding;
+  });
+
+  const kmPerDriver = state.drivers.map(d => ({
+    name: d.emoji + ' ' + d.name,
+    km: trips.filter(t=>t.driverId===d.id).reduce((a,t)=>a+t.diff,0),
+    color: d.color || '#bee3f8',
+  })).filter(d=>d.km>0);
+
+  const kmPerCar = state.cars.map(c => ({
+    name: c.icon + ' ' + c.name,
+    km: trips.filter(t=>t.carId===c.id).reduce((a,t)=>a+t.diff,0),
+    color: carColor(c.id),
+  })).filter(c=>c.km>0);
+
+  const co2Total = trips.reduce((a,t)=>a+co2ForTrip(t),0).toFixed(1);
+
+  const grafiekSection = `
+  <div class="stat-section">
+    <h3>📊 Km per maand (${state.statYear})</h3>
+    <canvas id="chart-maand" height="120"></canvas>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+    <div class="stat-section">
+      <h3>👤 Km per bestuurder</h3>
+      <canvas id="chart-driver" height="200"></canvas>
+    </div>
+    <div class="stat-section">
+      <h3>🚗 Km per auto</h3>
+      <canvas id="chart-car" height="200"></canvas>
+    </div>
+  </div>
+  <div class="stat-section">
+    <h3>🌍 CO₂ uitstoot</h3>
+    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div style="text-align:center;">
+        <div style="font-size:2rem;font-weight:800;color:#276749;">${co2Total} kg</div>
+        <div style="font-size:0.78rem;color:#718096;margin-top:2px;">Totale CO₂ in deze periode</div>
+      </div>
+      <div style="flex:1;min-width:200px;">
+        ${trips.length > 0 ? `<canvas id="chart-co2" height="80"></canvas>` : '<p style="color:#a0aec0;font-size:0.82rem;">Geen data</p>'}
+      </div>
+    </div>
+  </div>`;
+
   const summary = `
   <div class="stat-section">
     <h3>📋 Samenvatting periode</h3>
@@ -1264,7 +1677,52 @@ function renderStatistieken() {
     </div>
   </div>`;
 
-  return periodSelector + summary + carTable + driverTable + driverCarTable + funStats;
+  const allStats = periodSelector + summary + carTable + driverTable + driverCarTable + grafiekSection + funStats;
+
+  // Teken grafieken na render
+  setTimeout(() => {
+    if (typeof Chart === 'undefined') return;
+    Chart.defaults.font.family = "'Segoe UI', sans-serif";
+
+    // Km per maand
+    const ctxM = document.getElementById('chart-maand');
+    if (ctxM) new Chart(ctxM, {
+      type: 'bar',
+      data: { labels: maanden, datasets: [{ label: 'km', data: kmPerMaand, backgroundColor: '#2b6cb0cc', borderRadius: 6 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+
+    // Km per bestuurder (donut)
+    const ctxD = document.getElementById('chart-driver');
+    if (ctxD && kmPerDriver.length) new Chart(ctxD, {
+      type: 'doughnut',
+      data: { labels: kmPerDriver.map(d=>d.name), datasets: [{ data: kmPerDriver.map(d=>d.km), backgroundColor: kmPerDriver.map(d=>d.color), borderWidth: 2 }] },
+      options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    });
+
+    // Km per auto (donut)
+    const ctxC = document.getElementById('chart-car');
+    if (ctxC && kmPerCar.length) new Chart(ctxC, {
+      type: 'doughnut',
+      data: { labels: kmPerCar.map(c=>c.name), datasets: [{ data: kmPerCar.map(c=>c.km), backgroundColor: kmPerCar.map(c=>c.color), borderWidth: 2 }] },
+      options: { plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } } }
+    });
+
+    // CO2 per maand (lijn)
+    const co2PerMaand = Array(12).fill(0);
+    state.trips.filter(t=>parseInt(t.date.split('-')[0])===state.statYear).forEach(t => {
+      const m = parseInt(t.date.split('-')[1]) - 1;
+      co2PerMaand[m] += co2ForTrip(t);
+    });
+    const ctxCO2 = document.getElementById('chart-co2');
+    if (ctxCO2) new Chart(ctxCO2, {
+      type: 'line',
+      data: { labels: maanden, datasets: [{ label: 'kg CO₂', data: co2PerMaand.map(v=>+v.toFixed(1)), borderColor: '#276749', backgroundColor: '#c6f6d540', fill: true, tension: 0.4, pointRadius: 3 }] },
+      options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+    });
+  }, 100);
+
+  return allStats;
 }
 window.renderStatistieken = renderStatistieken;
 
@@ -1337,6 +1795,26 @@ window.render = render;
 
 // ─── BOOT ────────────────────────────────────────────────────────────────────
 tryAutoConnect();
+
+// ── FEATURE 16: PWA ──
+const manifest = {
+  name: "Familie Vetjens Autotracker",
+  short_name: "Autotracker",
+  start_url: "./",
+  display: "standalone",
+  background_color: "#f0f4f8",
+  theme_color: "#1a365d",
+  icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>", sizes: "any", type: "image/svg+xml" }]
+};
+const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
+const manifestUrl  = URL.createObjectURL(manifestBlob);
+document.getElementById('pwa-manifest').href = manifestUrl;
+
+if ('serviceWorker' in navigator) {
+  const swCode = `self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));`;
+  const swBlob = new Blob([swCode], { type: 'application/javascript' });
+  navigator.serviceWorker.register(URL.createObjectURL(swBlob)).catch(()=>{});
+}
 </script>
 </body>
 </html>
