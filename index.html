@@ -60,6 +60,8 @@
   .btn-sm { padding: 5px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.15s; }
   .btn-danger-sm { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
   .btn-danger-sm:hover { background: #fed7d7; }
+  .btn-edit-sm { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+  .btn-edit-sm:hover { background: #bee3f8; }
 
   /* ── Trips ── */
   .trip-list { display: flex; flex-direction: column; gap: 7px; }
@@ -275,6 +277,7 @@ const state = {
   filterCarId:    'all',
   filterChecked:  'all',
   filterDriverId: 'all',
+  editTripId: null,
   statPeriod: 'maand',
   statYear: new Date().getFullYear(),
   statMonth: new Date().getMonth() + 1,
@@ -455,7 +458,7 @@ async function tryAutoConnect() {
 function showTab(tab) {
   state.activeTab = tab;
   document.querySelectorAll('.tab').forEach((el, i) => {
-    el.classList.toggle('active', ['overzicht','toevoegen','ritten','statistieken','instellingen'][i] === tab);
+    el.classList.toggle('active', ['overzicht','toevoegen','ritten','statistieken','instellingen'].includes(tab) && ['overzicht','toevoegen','ritten','statistieken','instellingen'][i] === tab);
   });
   render();
 }
@@ -563,6 +566,62 @@ function prefillCarKm() {
   }
 }
 window.prefillCarKm = prefillCarKm;
+
+function openEditTrip(id) {
+  state.editTripId = id;
+  showTab('bewerken');
+}
+window.openEditTrip = openEditTrip;
+
+function submitEditTrip() {
+  const trip = state.trips.find(t => t.id === state.editTripId);
+  if (!trip) return;
+
+  const carId      = parseInt(document.getElementById('fe-car').value);
+  const driverId   = parseInt(document.getElementById('fe-driver').value);
+  const dateVal    = document.getElementById('fe-date').value;
+  const beginKmVal = parseInt(document.getElementById('fe-km-begin').value);
+  const eindKmVal  = parseInt(document.getElementById('fe-km-eind').value);
+  const dest       = document.getElementById('fe-dest').value.trim();
+  const goal       = document.getElementById('fe-goal').value;
+
+  if (!dateVal)              { alert('Vul een datum in.'); return; }
+  if (isNaN(beginKmVal))     { alert('Vul een geldige beginstand in.'); return; }
+  if (isNaN(eindKmVal))      { alert('Vul een geldige eindstand in.'); return; }
+  if (eindKmVal <= beginKmVal) { alert('De eindstand moet hoger zijn dan de beginstand.'); return; }
+  if (!dest)                 { alert('Vul een bestemming in.'); return; }
+
+  const diff = eindKmVal - beginKmVal;
+
+  // Update de rit
+  trip.carId      = carId;
+  trip.driverId   = driverId;
+  trip.date       = dateVal;
+  trip.prevKm     = beginKmVal;
+  trip.km         = eindKmVal;
+  trip.diff       = diff;
+  trip.vergoeding = +(diff * trip.tariefSnapshot).toFixed(2);
+  trip.dest       = dest;
+  trip.goal       = goal;
+
+  // Herbereken km-stand van de auto op basis van hoogste eindstand
+  const car = getCarById(carId);
+  if (car) {
+    const carTrips = state.trips.filter(t => t.carId === carId);
+    car.currentKm = Math.max(...carTrips.map(t => t.km));
+  }
+
+  state.editTripId = null;
+  pushToFirebase();
+  showTab('ritten');
+}
+window.submitEditTrip = submitEditTrip;
+
+function cancelEdit() {
+  state.editTripId = null;
+  showTab('ritten');
+}
+window.cancelEdit = cancelEdit;
 
 function deleteTrip(id) {
   if (!confirm('Rit verwijderen?')) return;
@@ -822,7 +881,8 @@ function renderTripItem(t) {
       <div class="km-diff">+${fmt(t.diff)} km</div>
       <div class="vergoeding">💶 ${fmtEur(t.vergoeding)}</div>
     </div>
-    <button class="btn-sm btn-danger-sm" onclick="deleteTrip(${t.id})" style="flex-shrink:0;">🗑</button>
+    <button class="btn-sm btn-edit-sm" onclick="openEditTrip(${t.id})" style="flex-shrink:0;" title="Bewerken">✏️</button>
+    <button class="btn-sm btn-danger-sm" onclick="deleteTrip(${t.id})" style="flex-shrink:0;" title="Verwijderen">🗑</button>
   </div>`;
 }
 
@@ -1208,6 +1268,59 @@ function renderStatistieken() {
 }
 window.renderStatistieken = renderStatistieken;
 
+// ─── RENDER: EDIT TRIP ───────────────────────────────────────────────────────
+function renderEdit() {
+  const trip = state.trips.find(t => t.id === state.editTripId);
+  if (!trip) return `<div class="form-card"><div class="empty-state"><div class="es-icon">❓</div>Rit niet gevonden.</div></div>`;
+
+  const car    = getCarById(trip.carId);
+  const driver = getDriverById(trip.driverId);
+
+  return `<div class="form-card">
+    <h2>✏️ Rit bewerken</h2>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Auto</label>
+        <select id="fe-car">${state.cars.map(c=>`<option value="${c.id}" ${c.id===trip.carId?'selected':''}>${c.icon} ${c.name}</option>`).join('')}</select>
+      </div>
+      <div class="form-group">
+        <label>Datum</label>
+        <input type="date" id="fe-date" value="${trip.date}">
+      </div>
+      <div class="form-group">
+        <label>Beginstand (km-teller)</label>
+        <input type="number" id="fe-km-begin" value="${trip.prevKm}" min="0">
+      </div>
+      <div class="form-group">
+        <label>Eindstand (km-teller)</label>
+        <input type="number" id="fe-km-eind" value="${trip.km}" min="0">
+      </div>
+      <div class="form-group">
+        <label>Bestuurder</label>
+        <select id="fe-driver">${state.drivers.map(d=>`<option value="${d.id}" ${d.id===trip.driverId?'selected':''}>${d.emoji} ${d.name}</option>`).join('')}</select>
+      </div>
+      <div class="form-group full">
+        <label>Bestemming</label>
+        <input type="text" id="fe-dest" value="${trip.dest}">
+      </div>
+      <div class="form-group">
+        <label>Doel</label>
+        <select id="fe-goal">
+          <option value="prive" ${trip.goal==='prive'?'selected':''}>🏠 Privé</option>
+          <option value="werk"  ${trip.goal==='werk' ?'selected':''}>💼 Werk</option>
+        </select>
+      </div>
+    </div>
+    <div style="margin-top:10px;padding:8px 12px;background:#fffbeb;border-radius:8px;font-size:0.8rem;color:#744210;border:1px solid #f6e05e;">
+      💡 Vergoeding wordt herberekend op basis van het originele tarief van deze rit (${fmtEur(trip.tariefSnapshot)}/km).
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="cancelEdit()">✕ Annuleren</button>
+      <button class="btn btn-primary" style="flex:2;" onclick="submitEditTrip()">💾 Wijzigingen opslaan</button>
+    </div>
+  </div>`;
+}
+
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 function render() {
   const app = document.getElementById('app');
@@ -1215,6 +1328,7 @@ function render() {
     case 'overzicht':     app.innerHTML = renderOverview();     break;
     case 'toevoegen':     app.innerHTML = renderAdd();          break;
     case 'ritten':        app.innerHTML = renderTrips();        break;
+    case 'bewerken':      app.innerHTML = renderEdit();         break;
     case 'statistieken':  app.innerHTML = renderStatistieken(); break;
     case 'instellingen':  app.innerHTML = renderSettings();     break;
   }
