@@ -61,26 +61,32 @@
   .btn-danger-sm:hover { background: #fed7d7; }
 
   /* ── Trips ── */
-  .trip-list { display: flex; flex-direction: column; gap: 8px; }
-  .trip-item { background: white; border-radius: 10px; padding: 12px 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); display: flex; align-items: center; gap: 10px; transition: opacity 0.2s; flex-wrap: nowrap; }
-  .trip-item.checked-trip { opacity: 0.55; }
-  .trip-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; background: #cbd5e0; }
-  .trip-info { flex: 1; min-width: 0; overflow: hidden; }
-  .trip-dest { font-weight: 700; font-size: 0.92rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .trip-meta { font-size: 0.74rem; color: #718096; margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; line-height: 1.4; }
-  .trip-meta-item { white-space: nowrap; }
-  .trip-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; min-width: 80px; }
-  .km-val { font-weight: 800; font-size: 0.88rem; color: #2d3748; white-space: nowrap; }
-  .km-diff { font-size: 0.72rem; color: #38a169; font-weight: 700; white-space: nowrap; }
-  .vergoeding { font-size: 0.75rem; font-weight: 700; color: #744210; background: #fefcbf; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
-  .badge { display: inline-block; padding: 1px 6px; border-radius: 999px; font-size: 0.65rem; font-weight: 700; }
-  .badge-prive { background: #ebf8ff; color: #2b6cb0; }
-  .badge-werk { background: #f0fff4; color: #276749; }
-  .badge-checked { background: #f0fff4; color: #276749; font-size: 0.65rem; padding: 1px 6px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
-  .badge-unchecked { background: #fff5f5; color: #c53030; font-size: 0.65rem; padding: 1px 6px; border-radius: 999px; font-weight: 700; white-space: nowrap; }
+  .trip-list { display: flex; flex-direction: column; gap: 7px; }
+  .trip-item { background: white; border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); display: flex; align-items: center; gap: 14px; transition: opacity 0.2s; }
+  .trip-item.checked-trip { opacity: 0.5; }
+  .trip-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .driver-chip { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0; }
   .check-wrap { display: flex; align-items: center; cursor: pointer; flex-shrink: 0; }
-  .check-wrap input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: #38a169; flex-shrink: 0; }
-
+  .check-wrap input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: #38a169; }
+  .t-dest    { flex: 2.5; font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1a202c; }
+  .t-date    { flex: 1.2; font-size: 0.8rem; color: #718096; white-space: nowrap; }
+  .t-driver  { flex: 1.3; font-size: 0.82rem; font-weight: 600; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .t-car     { flex: 1.5; font-size: 0.82rem; font-weight: 600; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .t-goal    { flex: 1; }
+  .t-status  { flex: 0.8; white-space: nowrap; }
+  .t-km      { flex: 0; flex-shrink: 0; text-align: right; min-width: 80px; }
+  .km-diff   { font-size: 0.9rem; font-weight: 800; color: #1a202c; }
+  .vergoeding{ font-size: 0.72rem; font-weight: 700; color: #744210; background: #fefcbf; padding: 1px 7px; border-radius: 999px; display: inline-block; margin-top: 3px; }
+  .badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
+  .badge-prive { background: #ebf8ff; color: #2b6cb0; }
+  .badge-werk  { background: #f0fff4; color: #276749; }
+  .badge-checked   { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: #f0fff4; color: #276749; white-space: nowrap; }
+  .badge-unchecked { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: #fff5f5; color: #c53030; white-space: nowrap; }
+  @media (max-width: 620px) {
+    .t-date, .t-car, .t-goal { display: none; }
+    .t-dest   { flex: 1; }
+    .t-driver { flex: 1; font-size: 0.75rem; color: #718096; }
+  }
   /* ── Stats ── */
   .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
   @media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -663,34 +669,32 @@ function renderAdd() {
 
 // ─── RENDER: TRIP ITEM ───────────────────────────────────────────────────────
 function renderTripItem(t) {
-  const car    = getCarById(t.carId);
-  const driver = getDriverById(t.driverId);
-  const color  = carColor(t.carId);
-  const carName    = car    ? car.icon + ' ' + car.name       : '—';
-  const driverName = driver ? driver.emoji + ' ' + driver.name : '—';
+  const car         = getCarById(t.carId);
+  const driver      = getDriverById(t.driverId);
+  const dotColor    = carColor(t.carId);
+  const driverColor = driver ? (driver.color || '#e2e8f0') : '#e2e8f0';
+  const driverEmoji = driver ? driver.emoji : '👤';
+  const driverName  = driver ? driver.name  : '—';
+  const carLabel    = car ? car.icon + ' ' + car.name : '—';
+  const goalBadge   = `<span class="badge badge-${t.goal}">${t.goal==='prive'?'🏠 Privé':'💼 Werk'}</span>`;
   const statusBadge = t.checked
-    ? '<span class="badge-checked">✔</span>'
-    : '<span class="badge-unchecked">○</span>';
-  const goalBadge = `<span class="badge badge-${t.goal}">${t.goal==='prive'?'🏠':'💼'}</span>`;
+    ? '<span class="badge-checked">✔ OK</span>'
+    : '<span class="badge-unchecked">○ Open</span>';
   return `<div class="trip-item ${t.checked?'checked-trip':''}">
-    <label class="check-wrap" title="${t.checked?'Markeer als open':'Markeer als gecontroleerd'}">
-      <input type="checkbox" ${t.checked?'checked':''} onchange="toggleChecked(${t.id})">
-    </label>
-    <div class="trip-dot" style="background:${color};"></div>
-    <div class="trip-info">
-      <div class="trip-dest">${t.dest} ${goalBadge}</div>
-      <div class="trip-meta">
-        <span class="trip-meta-item">${t.date}</span>
-        <span class="trip-meta-item">· ${carName}</span>
-        <span class="trip-meta-item">· ${driverName}</span>
-        <span class="trip-meta-item">· ${statusBadge}</span>
-      </div>
-    </div>
-    <div class="trip-right">
-      <div class="km-val">+${fmt(t.diff)} km</div>
+    <label class="check-wrap"><input type="checkbox" ${t.checked?'checked':''} onchange="toggleChecked(${t.id})"></label>
+    <div class="trip-dot" style="background:${dotColor};"></div>
+    <div class="driver-chip" style="background:${driverColor};">${driverEmoji}</div>
+    <div class="t-dest">${t.dest}</div>
+    <div class="t-goal">${goalBadge}</div>
+    <div class="t-date">${t.date}</div>
+    <div class="t-driver">${driverName}</div>
+    <div class="t-car">${carLabel}</div>
+    <div class="t-status">${statusBadge}</div>
+    <div class="t-km">
+      <div class="km-diff">+${fmt(t.diff)} km</div>
       <div class="vergoeding">💶 ${fmtEur(t.vergoeding)}</div>
     </div>
-    <button class="btn-sm btn-danger-sm" onclick="deleteTrip(${t.id})" title="Verwijderen">🗑</button>
+    <button class="btn-sm btn-danger-sm" onclick="deleteTrip(${t.id})" style="flex-shrink:0;">🗑</button>
   </div>`;
 }
 
