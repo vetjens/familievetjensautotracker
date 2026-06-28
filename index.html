@@ -855,6 +855,18 @@ function voegFavBestToe() {
 }
 window.voegFavBestToe = voegFavBestToe;
 
+function setRittenView(view) {
+  state.ritten_view = view;
+  render();
+}
+window.setRittenView = setRittenView;
+
+function setSearch(val) {
+  state.searchQuery = val;
+  render();
+}
+window.setSearch = setSearch;
+
 function setFilter(type, val) {
   if (type === 'car')     state.filterCarId    = val;
   if (type === 'checked') state.filterChecked  = val;
@@ -1160,10 +1172,10 @@ function renderTrips() {
   return `
   <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
     <input type="text" placeholder="🔍 Zoek op bestemming, bestuurder, auto..." value="${state.searchQuery}"
-      oninput="state.searchQuery=this.value;render()"
+      oninput="setSearch(this.value)"
       style="flex:1;padding:9px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.88rem;">
-    <button class="filter-btn ${state.ritten_view==='lijst'?'active':''}" onclick="state.ritten_view='lijst';render()">☰ Lijst</button>
-    <button class="filter-btn ${state.ritten_view==='kalender'?'active':''}" onclick="state.ritten_view='kalender';render()">📅 Kalender</button>
+    <button class="filter-btn ${state.ritten_view==='lijst'?'active':''}" onclick="setRittenView('lijst')">☰ Lijst</button>
+    <button class="filter-btn ${state.ritten_view==='kalender'?'active':''}" onclick="setRittenView('kalender')">📅 Kalender</button>
   </div>
   <div class="filter-bar">
     <button class="filter-btn ${state.filterCarId==='all'?'active':''}" onclick="setFilter('car','all')">Alle auto's</button>
