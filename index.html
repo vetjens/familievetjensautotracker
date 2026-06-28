@@ -145,6 +145,16 @@
   .info-box.blue { background: #ebf8ff; color: #2c5282; border: 1px solid #bee3f8; }
   .info-box.green { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
 
+  /* ── Betalingspopup ── */
+  .betaling-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .betaling-box { background:white; border-radius:16px; padding:28px; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-height:80vh; overflow-y:auto; }
+  .betaling-box h2 { font-size:1.2rem; font-weight:800; color:#1a365d; margin-bottom:6px; }
+  .betaling-box .subtitle { font-size:0.82rem; color:#718096; margin-bottom:20px; }
+  .betaling-driver-row { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#f7fafc; border-radius:10px; margin-bottom:8px; }
+  .betaling-driver-row .name { font-weight:700; font-size:0.92rem; }
+  .betaling-driver-row .ritten { font-size:0.75rem; color:#718096; margin-top:1px; }
+  .betaling-driver-row .bedrag { font-size:1.1rem; font-weight:800; color:#2b6cb0; }
+
   .empty-state { text-align: center; padding: 30px 20px; color: #a0aec0; }
   .empty-state .es-icon { font-size: 2.5rem; margin-bottom: 8px; }
 
@@ -239,6 +249,19 @@
   <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
     <div class="sync-dot orange" id="sync-dot"></div>
     <span class="sync-label" id="sync-label">Verbinden…</span>
+  </div>
+</div>
+
+<!-- ── BETALINGSPOPUP ── -->
+<div class="betaling-overlay" id="betaling-overlay" style="display:none;">
+  <div class="betaling-box">
+    <h2>💶 Wekelijks betalingsoverzicht</h2>
+    <p class="subtitle" id="betaling-subtitle"></p>
+    <div id="betaling-content"></div>
+    <div style="margin-top:16px;padding:10px 12px;background:#f0fff4;border-radius:8px;font-size:0.78rem;color:#276749;border:1px solid #c6f6d5;">
+      ✅ Alleen gecheckte ritten zijn meegenomen. Markeer ritten als gecontroleerd via "Alle ritten".
+    </div>
+    <button class="btn btn-primary btn-block" style="margin-top:14px;" onclick="sluitBetalingPopup()">Sluiten</button>
   </div>
 </div>
 
@@ -419,6 +442,7 @@ function subscribeFirebase() {
     }
     setSyncStatus('online');
     render();
+    setTimeout(checkZondagBetaling, 1000);
   }, (error) => {
     console.error('Firebase error:', error);
     setSyncStatus('offline');
@@ -1218,6 +1242,11 @@ function renderSettings() {
       <button class="btn btn-primary" style="flex:1;" onclick="maakBackup()">⬇️ Backup downloaden</button>
       <button class="btn btn-ghost" style="flex:1;" onclick="herstelBackup()">⬆️ Backup herstellen</button>
     </div>
+  </div>
+  <div class="form-card">
+    <h2>💶 Betalingsoverzicht</h2>
+    <p style="font-size:0.82rem;color:#718096;margin-bottom:14px;">Elke zondag verschijnt automatisch een popup met het totaalbedrag per bestuurder op basis van gecheckte ritten. Je kunt het ook handmatig openen.</p>
+    <button class="btn btn-primary btn-block" onclick="toonBetalingOverzicht()">💶 Betalingsoverzicht openen</button>
   </div>`;
 
   const tariefSection = `
@@ -1885,6 +1914,91 @@ function render() {
 window.render = render;
 
 // ─── BOOT ────────────────────────────────────────────────────────────────────
+// ── BETALINGSPOPUP ──
+function checkZondagBetaling() {
+  const dag = new Date().getDay(); // 0 = zondag
+  if (dag !== 0) return;
+
+  const sleutel = 'betaling_getoond_' + new Date().toISOString().split('T')[0];
+  if (localStorage.getItem(sleutel)) return;
+
+  // Bereken gecheckte ritten per bestuurder
+  const gecheckt = state.trips.filter(t => t.checked);
+  if (gecheckt.length === 0) return;
+
+  const perBestuurder = state.drivers.map(d => {
+    const ritten = gecheckt.filter(t => t.driverId === d.id);
+    const totaal = ritten.reduce((a,t)=>a+t.vergoeding, 0);
+    return { driver: d, ritten: ritten.length, totaal, km: ritten.reduce((a,t)=>a+t.diff,0) };
+  }).filter(r => r.totaal > 0);
+
+  if (perBestuurder.length === 0) return;
+
+  const vandaag = new Date().toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' });
+  document.getElementById('betaling-subtitle').textContent = `Overzicht van ${vandaag} — gecheckte ritten deze week`;
+
+  const inhoud = perBestuurder.map(r => `
+    <div class="betaling-driver-row">
+      <div>
+        <div class="name">${r.driver.emoji} ${r.driver.name}</div>
+        <div class="ritten">${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</div>
+      </div>
+      <div class="bedrag">${fmtEur(r.totaal)}</div>
+    </div>`).join('');
+
+  const totaalAlles = perBestuurder.reduce((a,r)=>a+r.totaal,0);
+  document.getElementById('betaling-content').innerHTML = inhoud + `
+    <div style="border-top:2px solid #e2e8f0;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+      <strong>Totaal te betalen</strong>
+      <strong style="font-size:1.2rem;color:#1a365d;">${fmtEur(totaalAlles)}</strong>
+    </div>`;
+
+  document.getElementById('betaling-overlay').style.display = 'flex';
+  localStorage.setItem(sleutel, '1');
+}
+window.checkZondagBetaling = checkZondagBetaling;
+
+function sluitBetalingPopup() {
+  document.getElementById('betaling-overlay').style.display = 'none';
+}
+window.sluitBetalingPopup = sluitBetalingPopup;
+
+// Handmatig openen vanuit instellingen
+function toonBetalingOverzicht() {
+  const gecheckt = state.trips.filter(t => t.checked);
+  if (gecheckt.length === 0) { alert('Geen gecheckte ritten gevonden.'); return; }
+
+  const perBestuurder = state.drivers.map(d => {
+    const ritten = gecheckt.filter(t => t.driverId === d.id);
+    const totaal = ritten.reduce((a,t)=>a+t.vergoeding, 0);
+    return { driver: d, ritten: ritten.length, totaal, km: ritten.reduce((a,t)=>a+t.diff,0) };
+  }).filter(r => r.totaal > 0);
+
+  if (perBestuurder.length === 0) { alert('Geen openstaande vergoedingen gevonden.'); return; }
+
+  const vandaag = new Date().toLocaleDateString('nl-NL', { weekday:'long', day:'numeric', month:'long' });
+  document.getElementById('betaling-subtitle').textContent = `Handmatig geopend op ${vandaag}`;
+
+  const inhoud = perBestuurder.map(r => `
+    <div class="betaling-driver-row">
+      <div>
+        <div class="name">${r.driver.emoji} ${r.driver.name}</div>
+        <div class="ritten">${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</div>
+      </div>
+      <div class="bedrag">${fmtEur(r.totaal)}</div>
+    </div>`).join('');
+
+  const totaalAlles = perBestuurder.reduce((a,r)=>a+r.totaal,0);
+  document.getElementById('betaling-content').innerHTML = inhoud + `
+    <div style="border-top:2px solid #e2e8f0;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+      <strong>Totaal te betalen</strong>
+      <strong style="font-size:1.2rem;color:#1a365d;">${fmtEur(totaalAlles)}</strong>
+    </div>`;
+
+  document.getElementById('betaling-overlay').style.display = 'flex';
+}
+window.toonBetalingOverzicht = toonBetalingOverzicht;
+
 tryAutoConnect();
 
 // ── FEATURE 16: PWA ──
