@@ -25,13 +25,13 @@
   .sidebar { width: 230px; flex-shrink: 0; background: var(--sid); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
   .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 12px; }
   .sidebar-logo-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--sact); display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
-  .sidebar-logo-name { font-size: 0.92rem; font-weight: 800; color: white; line-height: 1.25; }
+  .sidebar-logo-name { font-size: 0.84rem; font-weight: 800; color: white; line-height: 1.25; white-space: nowrap; }
   .sidebar-logo-sub { font-size: 0.65rem; color: var(--stext2); }
   .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; font-size: 0.84rem; font-weight: 500; color: var(--stext2); cursor: pointer; transition: background 0.15s, color 0.15s; }
   .sidebar-item:hover:not(.active) { background: rgba(255,255,255,0.04); color: var(--stext); }
   .sidebar-item.active { background: var(--sact-bg); color: var(--sact); font-weight: 700; }
   .sidebar-item .nav-ico { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
-  .sidebar-badge { margin-left: auto; background: var(--red); color: white; font-size: 0.62rem; font-weight: 800; padding: 1px 6px; border-radius: 999px; min-width: 18px; text-align: center; }
+  .sidebar-badge { margin-left: auto; background: var(--red); color: white; font-size: 0.62rem; font-weight: 800; border-radius: 999px; min-width: 18px; height: 18px; padding: 0 5px; display: flex; align-items: center; justify-content: center; line-height: 1; }
   .sidebar-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 10px 0; }
   .sidebar-section { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--stext2); padding: 0 12px; margin: 6px 0; opacity: 0.65; }
   .sidebar-car { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 0.74rem; color: var(--stext2); cursor: pointer; border-radius: 7px; }
@@ -186,6 +186,16 @@
   .betaling-driver-row .ritten { font-size:0.75rem; color:var(--txt3); margin-top:1px; }
   .betaling-driver-row .bedrag { font-size:1.1rem; font-weight:800; color:var(--accent2); }
 
+  /* ── Rit detail popup ── */
+  .detail-rows { display: flex; flex-direction: column; gap: 0; }
+  .detail-row { display: grid; grid-template-columns: 160px 1fr; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--surf2); align-items: start; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { font-size: 0.74rem; font-weight: 600; color: var(--txt3); white-space: nowrap; }
+  .detail-val { font-size: 0.9rem; font-weight: 600; color: var(--txt); word-break: break-word; white-space: normal; }
+  @media (max-width: 480px) {
+    .detail-row { grid-template-columns: 1fr; gap: 2px; }
+  }
+
   .empty-state { text-align: center; padding: 30px 20px; color: var(--txt3); }
   .empty-state .es-icon { font-size: 2.5rem; margin-bottom: 8px; }
 
@@ -307,7 +317,7 @@
     <div class="sidebar-logo">
       <div class="sidebar-logo-icon">🚗</div>
       <div>
-        <div class="sidebar-logo-name">Vetjens</div>
+        <div class="sidebar-logo-name">Familie Vetjens</div>
         <div class="sidebar-logo-sub">Autotracker</div>
       </div>
     </div>
@@ -411,6 +421,17 @@
   </div>
 </div>
 
+<!-- ── RIT DETAIL POPUP ── -->
+<div class="betaling-overlay" id="trip-detail-overlay" style="display:none;" onclick="if(event.target===this) sluitTripDetail()">
+  <div class="betaling-box" style="max-width:520px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2>🛣️ Ritdetails</h2>
+      <button onclick="sluitTripDetail()" style="font-size:1.2rem;background:none;border:none;cursor:pointer;color:#8fa8c2;">✕</button>
+    </div>
+    <div id="trip-detail-content"></div>
+  </div>
+</div>
+
 <!-- ══════════════════════════════════════════════════════════ SCRIPT ══ -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script type="module">
@@ -441,6 +462,7 @@ const state = {
   filterChecked:  'all',
   filterDriverId: 'all',
   editTripId: null,
+  preselectCarId: null,
   statPeriod: 'maand',
   statYear: new Date().getFullYear(),
   statMonth: new Date().getMonth() + 1,
@@ -1200,16 +1222,20 @@ function renderAdd() {
   if (!state.cars.length)    return `<div class="form-card"><div class="empty-state"><div class="es-icon">🚗</div>Voeg eerst een auto toe in <strong>Instellingen</strong>.</div><button class="btn btn-primary btn-block" onclick="showTab('instellingen')">Ga naar Instellingen</button></div>`;
   if (!state.drivers.length) return `<div class="form-card"><div class="empty-state"><div class="es-icon">👤</div>Voeg eerst een bestuurder toe in <strong>Instellingen</strong>.</div><button class="btn btn-primary btn-block" onclick="showTab('instellingen')">Ga naar Instellingen</button></div>`;
 
-  const firstCar       = state.cars[0];
-  const defaultBeginKm = firstCar ? (firstCar.currentKm || 0) : 0;
+  const selectedCarId  = (state.preselectCarId && state.cars.some(c => c.id === state.preselectCarId))
+    ? state.preselectCarId
+    : state.cars[0].id;
+  const selectedCar    = getCarById(selectedCarId);
+  const defaultBeginKm = selectedCar ? (selectedCar.currentKm || 0) : 0;
   const isTeller       = invoerMode === 'teller';
+  state.preselectCarId = null; // eenmalig toepassen, daarna resetten
 
   return `<div class="form-card">
     <h2>➕ Nieuwe rit toevoegen</h2>
     <div class="form-grid">
       <div class="form-group">
         <label>Auto</label>
-        <select id="f-car" onchange="prefillCarKm()">${state.cars.map(c=>`<option value="${c.id}">${c.icon} ${c.name} (${fmt(c.currentKm)} km)</option>`).join('')}</select>
+        <select id="f-car" onchange="prefillCarKm()">${state.cars.map(c=>`<option value="${c.id}" ${c.id===selectedCarId?'selected':''}>${c.icon} ${c.name} (${fmt(c.currentKm)} km)</option>`).join('')}</select>
       </div>
       <div class="form-group">
         <label>Datum</label>
@@ -1321,8 +1347,8 @@ function renderTripItem(t) {
   const statusBadge = t.checked
     ? '<span class="badge-checked">✔ OK</span>'
     : '<span class="badge-unchecked">○ Open</span>';
-  return `<div class="trip-item ${t.checked?'checked-trip':''}">
-    <label class="check-wrap"><input type="checkbox" ${t.checked?'checked':''} onchange="toggleChecked(${t.id})"></label>
+  return `<div class="trip-item ${t.checked?'checked-trip':''}" onclick="openTripDetail(${t.id})" style="cursor:pointer;">
+    <label class="check-wrap" onclick="event.stopPropagation()"><input type="checkbox" ${t.checked?'checked':''} onchange="toggleChecked(${t.id})"></label>
     <div class="trip-dot" style="background:${dotColor};"></div>
     <div class="driver-chip" style="background:${driverColor};">${driverEmoji}</div>
     <div class="t-dest">${t.dest}${t.notitie?`<span style="font-size:0.7rem;color:#8fa8c2;font-weight:400;margin-left:6px;">📝 ${t.notitie}</span>`:''}${t.route?`<span style="font-size:0.7rem;color:#8fa8c2;font-weight:400;margin-left:6px;">🗺️ ${t.route}</span>`:''}
@@ -1335,14 +1361,75 @@ function renderTripItem(t) {
     <div class="t-km">
       <div class="km-diff">+${fmt(t.diff)} km</div>
       ${t.teltMee !== false
-        ? `<div class="vergoeding" style="cursor:pointer;" onclick="toggleTeltMee(${t.id})" title="Klik om uit te sluiten van vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`
-        : `<div class="vergoeding" style="background:#eef5fc;color:#8fa8c2;text-decoration:line-through;cursor:pointer;" onclick="toggleTeltMee(${t.id})" title="Klik om mee te nemen in vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`}
+        ? `<div class="vergoeding" style="cursor:pointer;" onclick="event.stopPropagation();toggleTeltMee(${t.id})" title="Klik om uit te sluiten van vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`
+        : `<div class="vergoeding" style="background:#eef5fc;color:#8fa8c2;text-decoration:line-through;cursor:pointer;" onclick="event.stopPropagation();toggleTeltMee(${t.id})" title="Klik om mee te nemen in vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`}
       <div style="font-size:0.68rem;color:#276749;white-space:nowrap;">🌿 ${co2ForTrip(t)} kg CO₂</div>
     </div>
-    <button class="btn-sm btn-edit-sm" onclick="openEditTrip(${t.id})" style="flex-shrink:0;" title="Bewerken">✏️</button>
-    <button class="btn-sm btn-danger-sm" onclick="deleteTrip(${t.id})" style="flex-shrink:0;" title="Verwijderen">🗑</button>
+    <button class="btn-sm btn-edit-sm" onclick="event.stopPropagation();openEditTrip(${t.id})" style="flex-shrink:0;" title="Bewerken">✏️</button>
+    <button class="btn-sm btn-danger-sm" onclick="event.stopPropagation();deleteTrip(${t.id})" style="flex-shrink:0;" title="Verwijderen">🗑</button>
   </div>`;
 }
+
+// ─── TRIP DETAIL POPUP ────────────────────────────────────────────────────────
+function openTripDetail(id) {
+  const trip = state.trips.find(t => t.id === id);
+  if (!trip) return;
+  const car    = getCarById(trip.carId);
+  const driver = getDriverById(trip.driverId);
+  const cat    = getCatById(trip.goal);
+
+  const catBadge = cat
+    ? `<span class="badge" style="background:${cat.color};color:${cat.textColor};font-size:0.78rem;">${cat.icon} ${cat.label}</span>`
+    : `<span class="badge" style="background:#eef5fc;color:#8fa8c2;font-size:0.78rem;">🏷️ ${trip.goal || '—'}</span>`;
+  const statusBadge = trip.checked
+    ? '<span class="badge-checked" style="font-size:0.78rem;">✔ Gecontroleerd</span>'
+    : '<span class="badge-unchecked" style="font-size:0.78rem;">○ Nog open</span>';
+  const vergoedingBadge = trip.teltMee !== false
+    ? `<span style="font-size:0.78rem;font-weight:700;color:#92400e;background:#fef3c7;padding:2px 10px;border-radius:999px;">💶 Telt mee</span>`
+    : `<span style="font-size:0.78rem;font-weight:700;color:#8fa8c2;background:#eef5fc;padding:2px 10px;border-radius:999px;text-decoration:line-through;">💶 Uitgesloten</span>`;
+
+  const rows = [
+    ['📍 Bestemming', trip.dest],
+    ['🗺️ Route', trip.route || '—'],
+    ['📝 Notitie', trip.notitie || '—'],
+    ['📅 Datum', trip.date],
+    ['👤 Bestuurder', driver ? `${driver.emoji} ${driver.name}` : '—'],
+    ['🚗 Auto', car ? `${car.icon} ${car.name}` : '—'],
+    ['🏷️ Categorie', null], // rendered separately as badge
+    ['📊 Status', null],
+    ['📟 Beginstand', `${fmt(trip.prevKm)} km`],
+    ['📟 Eindstand', `${fmt(trip.km)} km`],
+    ['🛣️ Afstand', `${fmt(trip.diff)} km`],
+    ['💶 Tarief bij registratie', `${fmtEur(trip.tariefSnapshot)}/km`],
+    ['💶 Vergoeding', `${fmtEur(trip.vergoeding)}`],
+    ['🌿 CO₂ uitstoot', `${co2ForTrip(trip)} kg`],
+  ];
+
+  const rowsHtml = rows.map(([label, val]) => {
+    if (label === '🏷️ Categorie') {
+      return `<div class="detail-row"><div class="detail-label">${label}</div><div class="detail-val">${catBadge}</div></div>`;
+    }
+    if (label === '📊 Status') {
+      return `<div class="detail-row"><div class="detail-label">${label}</div><div class="detail-val">${statusBadge} &nbsp; ${vergoedingBadge}</div></div>`;
+    }
+    return `<div class="detail-row"><div class="detail-label">${label}</div><div class="detail-val">${val}</div></div>`;
+  }).join('');
+
+  const box = document.getElementById('trip-detail-content');
+  box.innerHTML = `
+    <div class="detail-rows">${rowsHtml}</div>
+    <div style="display:flex;gap:8px;margin-top:18px;">
+      <button class="btn btn-ghost" style="flex:1;" onclick="sluitTripDetail()">Sluiten</button>
+      <button class="btn btn-edit-sm" style="flex:1;font-weight:700;" onclick="sluitTripDetail();openEditTrip(${trip.id})">✏️ Bewerken</button>
+    </div>`;
+  document.getElementById('trip-detail-overlay').style.display = 'flex';
+}
+window.openTripDetail = openTripDetail;
+
+function sluitTripDetail() {
+  document.getElementById('trip-detail-overlay').style.display = 'none';
+}
+window.sluitTripDetail = sluitTripDetail;
 
 // ─── RENDER: ALL TRIPS ───────────────────────────────────────────────────────
 function renderTrips() {
@@ -1970,13 +2057,13 @@ function renderStatistieken() {
     }).filter(Boolean).join(' ');
 
     return `<div style="background:#eef5fc;border-radius:10px;padding:14px 16px;margin-bottom:12px;border-left:4px solid ${cat.color || '#dbe7f3'};">
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
-        <span style="font-size:1.1rem;background:${cat.color};color:${cat.textColor};padding:3px 12px;border-radius:999px;font-weight:700;">${cat.icon} ${cat.label}</span>
-        <span style="font-size:0.82rem;font-weight:700;color:#0c1e3d;">${fmt(km)} km</span>
-        <span style="font-size:0.82rem;color:#8fa8c2;">${ct.length} rit${ct.length!==1?'ten':''}</span>
-        <span style="font-size:0.82rem;color:#744210;background:#fefcbf;padding:1px 8px;border-radius:999px;">${fmtEur(verg)}</span>
-        <span style="font-size:0.82rem;color:#276749;">🌿 ${co2} kg CO₂</span>
-        <span style="font-size:0.78rem;color:#8fa8c2;margin-left:auto;">${pct}% van totaal</span>
+      <div style="display:grid;grid-template-columns:140px 70px 70px 90px 110px 1fr;align-items:center;gap:10px;margin-bottom:10px;">
+        <span style="font-size:0.95rem;background:${cat.color};color:${cat.textColor};padding:3px 12px;border-radius:999px;font-weight:700;white-space:nowrap;justify-self:start;">${cat.icon} ${cat.label}</span>
+        <span style="font-size:0.82rem;font-weight:700;color:#0c1e3d;white-space:nowrap;">${fmt(km)} km</span>
+        <span style="font-size:0.82rem;color:#8fa8c2;white-space:nowrap;">${ct.length} rit${ct.length!==1?'ten':''}</span>
+        <span style="font-size:0.82rem;font-weight:700;color:#744210;background:#fefcbf;padding:1px 8px;border-radius:999px;white-space:nowrap;justify-self:start;">${fmtEur(verg)}</span>
+        <span style="font-size:0.82rem;color:#276749;white-space:nowrap;">🌿 ${co2} kg CO₂</span>
+        <span style="font-size:0.78rem;color:#8fa8c2;text-align:right;">${pct}% van totaal</span>
       </div>
       <div style="margin-bottom:6px;">
         <div style="font-size:0.7rem;color:#8fa8c2;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Per bestuurder</div>
@@ -2116,7 +2203,7 @@ function renderSidebarExtras() {
   const carsBox = document.getElementById('sidebar-cars');
   if (carsBox) {
     carsBox.innerHTML = state.cars.map(c => `
-      <div class="sidebar-car" onclick="showTab('toevoegen')">
+      <div class="sidebar-car" onclick="addTripForCar(${c.id})">
         <div class="sidebar-car-dot" style="background:${carColor(c.id)};"></div>
         ${c.icon} ${c.name}
         <span class="sidebar-car-km">${fmt(c.currentKm)}</span>
@@ -2125,10 +2212,17 @@ function renderSidebarExtras() {
   const badge = document.getElementById('sidebar-open-badge');
   if (badge) {
     const openCount = state.trips.filter(t => !t.checked).length;
-    if (openCount > 0) { badge.textContent = openCount; badge.style.display = 'inline-block'; }
+    if (openCount > 0) { badge.textContent = openCount; badge.style.display = 'flex'; }
     else { badge.style.display = 'none'; }
   }
 }
+
+// Klik op een auto in de sidebar: open "Rit toevoegen" met die auto al geselecteerd.
+function addTripForCar(carId) {
+  state.preselectCarId = carId;
+  showTab('toevoegen');
+}
+window.addTripForCar = addTripForCar;
 
 // ─── BOOT ────────────────────────────────────────────────────────────────────
 // ── BETALINGSPOPUP ──
@@ -2295,19 +2389,24 @@ function toonBetalingHistorie() {
   if (historie.length === 0) {
     box.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="es-icon">📋</div>Nog geen overzichten opgeslagen.<br><span style="font-size:0.78rem;">Open een betalingsoverzicht en klik op "📸 Overzicht opslaan".</span></div>`;
   } else {
-    box.innerHTML = historie.map((h, idx) => `
+    box.innerHTML = historie.map((h) => {
+      // Index op basis van originele (ongesorteerde) array, zodat acties altijd het juiste item raken
+      const idx = state.betalingHistorie.findIndex(x => x.weekNr === h.weekNr && x.jaar === h.jaar);
+      const labelZonderWeek = h.label.replace('Week '+h.weekNr+' ','');
+      return `
       <div style="border:1.5px solid #dbe7f3;border-radius:10px;margin-bottom:8px;overflow:hidden;">
-        <div onclick="toggleHistorieDetail(${idx})" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:white;transition:background 0.15s;" onmouseover="this.style.background='#eef5fc'" onmouseout="this.style.background='white'">
-          <div style="display:flex;align-items:center;gap:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:white;">
+          <div onclick="toggleHistorieDetail(${idx})" style="display:flex;align-items:center;gap:10px;cursor:pointer;flex:1;min-width:0;">
             <span style="font-size:0.9rem;">📅</span>
             <div>
-              <div style="font-weight:700;font-size:0.88rem;">Week ${h.weekNr} · ${h.label.replace('Week '+h.weekNr+' ','')}</div>
+              <div style="font-weight:700;font-size:0.88rem;">Week ${h.weekNr}, ${h.jaar} · ${labelZonderWeek}</div>
               <div style="font-size:0.71rem;color:#8fa8c2;">Opgeslagen op ${h.datum}</div>
             </div>
           </div>
-          <div style="display:flex;align-items:center;gap:10px;">
+          <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
             <strong style="color:#0c1e3d;">${fmtEur(h.totaalAlles)}</strong>
-            <span id="historie-arrow-${idx}" style="color:#8fa8c2;font-size:0.8rem;">▼</span>
+            <span id="historie-arrow-${idx}" onclick="toggleHistorieDetail(${idx})" style="color:#8fa8c2;font-size:0.8rem;cursor:pointer;">▼</span>
+            <button class="btn-sm btn-danger-sm" onclick="verwijderBetalingOverzicht(${idx})" title="Overzicht verwijderen">🗑</button>
           </div>
         </div>
         <div id="historie-detail-${idx}" style="display:none;padding:0 16px 12px;background:#fafafa;border-top:1px solid #dbe7f3;">
@@ -2317,12 +2416,23 @@ function toonBetalingHistorie() {
               <strong>${fmtEur(r.totaal)}</strong>
             </div>`).join('')}
         </div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
   }
 
   document.getElementById('historie-overlay').style.display = 'flex';
 }
 window.toonBetalingHistorie = toonBetalingHistorie;
+
+function verwijderBetalingOverzicht(idx) {
+  const item = state.betalingHistorie[idx];
+  if (!item) return;
+  if (!confirm(`Overzicht van week ${item.weekNr}, ${item.jaar} verwijderen? Dit kan niet ongedaan gemaakt worden.`)) return;
+  state.betalingHistorie.splice(idx, 1);
+  pushToFirebase();
+  toonBetalingHistorie();
+}
+window.verwijderBetalingOverzicht = verwijderBetalingOverzicht;
 
 function toggleHistorieDetail(idx) {
   const detail = document.getElementById(`historie-detail-${idx}`);
