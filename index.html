@@ -5,195 +5,254 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Familie Vetjens Autotracker</title>
 <link rel="manifest" id="pwa-manifest">
-<meta name="theme-color" content="#1a365d">
+<meta name="theme-color" content="#0c1e3d">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Vetjens Autotracker">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+  :root {
+    --sid: #0c1e3d; --sid2: #0f2647; --stext: #cbd5e1; --stext2: #64748b; --sact: #38bdf8; --sact-bg: rgba(56,189,248,0.18);
+    --bg: #f5f9fd; --surf: #ffffff; --surf2: #eef5fc; --bdr: #dbe7f3; --txt: #0c1e3d; --txt2: #2c4a6e; --txt3: #8fa8c2;
+    --accent: #0ea5e9; --accent2: #0284c7; --green: #10b981; --red: #ef4444; --amber: #f59e0b;
+  }
+  body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 14px; }
 
-  /* ── Header ── */
-  .header { background: linear-gradient(135deg, #1a365d, #2b6cb0); color: white; padding: 20px 24px; display: flex; align-items: center; gap: 12px; }
-  .header h1 { font-size: 1.4rem; font-weight: 700; }
-  .sync-dot { width: 10px; height: 10px; border-radius: 50%; margin-left: auto; flex-shrink: 0; }
-  .sync-dot.green  { background: #68d391; box-shadow: 0 0 6px #68d391; }
-  .sync-dot.orange { background: #f6ad55; box-shadow: 0 0 6px #f6ad55; }
-  .sync-dot.red    { background: #fc8181; box-shadow: 0 0 6px #fc8181; }
-  .sync-label { font-size: 0.72rem; opacity: 0.85; margin-left: 6px; }
+  /* ── App shell: sidebar (desktop) + bottom nav (mobile) ── */
+  .app-shell { display: flex; min-height: 100vh; }
 
-  /* ── Tabs ── */
-  .tabs { display: flex; background: white; border-bottom: 2px solid #e2e8f0; padding: 0 20px; overflow-x: auto; }
-  .tab { padding: 12px 18px; cursor: pointer; font-weight: 600; font-size: 0.85rem; color: #718096; border-bottom: 3px solid transparent; white-space: nowrap; transition: all 0.2s; }
-  .tab.active { color: #2b6cb0; border-bottom-color: #2b6cb0; }
-  .tab:hover:not(.active) { color: #4a5568; }
+  /* ── Sidebar (desktop) ── */
+  .sidebar { width: 230px; flex-shrink: 0; background: var(--sid); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 12px; }
+  .sidebar-logo-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--sact); display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+  .sidebar-logo-name { font-size: 0.92rem; font-weight: 800; color: white; line-height: 1.25; }
+  .sidebar-logo-sub { font-size: 0.65rem; color: var(--stext2); }
+  .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; font-size: 0.84rem; font-weight: 500; color: var(--stext2); cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .sidebar-item:hover:not(.active) { background: rgba(255,255,255,0.04); color: var(--stext); }
+  .sidebar-item.active { background: var(--sact-bg); color: var(--sact); font-weight: 700; }
+  .sidebar-item .nav-ico { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+  .sidebar-badge { margin-left: auto; background: var(--red); color: white; font-size: 0.62rem; font-weight: 800; padding: 1px 6px; border-radius: 999px; min-width: 18px; text-align: center; }
+  .sidebar-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 10px 0; }
+  .sidebar-section { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--stext2); padding: 0 12px; margin: 6px 0; opacity: 0.65; }
+  .sidebar-car { display: flex; align-items: center; gap: 8px; padding: 6px 12px; font-size: 0.74rem; color: var(--stext2); cursor: pointer; border-radius: 7px; }
+  .sidebar-car:hover { background: rgba(255,255,255,0.04); }
+  .sidebar-car-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .sidebar-car-km { margin-left: auto; font-size: 0.68rem; font-weight: 600; color: var(--stext); }
+  .sidebar-sync { margin-top: auto; padding: 12px 12px 0; border-top: 1px solid rgba(255,255,255,0.07); display: flex; align-items: center; gap: 7px; font-size: 0.7rem; color: var(--stext2); }
+  .sidebar-sync-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .sidebar-sync-dot.green  { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+  .sidebar-sync-dot.orange { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+  .sidebar-sync-dot.red    { background: #f87171; box-shadow: 0 0 6px #f87171; }
 
-  .content { padding: 20px; max-width: 960px; margin: 0 auto; }
+  /* ── Main area ── */
+  .main-area { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .topbar { display: flex; align-items: center; gap: 12px; padding: 18px 24px; background: var(--surf); border-bottom: 1px solid var(--bdr); }
+  .topbar-title { font-size: 1.15rem; font-weight: 800; color: var(--txt); letter-spacing: -0.01em; }
+  .topbar-actions { display: flex; gap: 8px; margin-left: auto; }
+  .content { padding: 20px 24px; max-width: 1100px; width: 100%; margin: 0 auto; flex: 1; }
+
+  /* ── Mobile header (hidden on desktop) ── */
+  .mobile-header { display: none; }
+
+  /* ── Bottom nav (mobile only) ── */
+  .bottom-nav { display: none; }
 
   /* ── Cards ── */
-  .car-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .car-card { background: white; border-radius: 12px; padding: 16px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-left: 4px solid #cbd5e0; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
-  .car-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.12); }
+  .car-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; margin-bottom: 22px; }
+  .car-card { background: var(--surf); border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(12,30,61,0.06); border-left: 4px solid var(--bdr); cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; }
+  .car-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(12,30,61,0.1); }
   .car-card .car-icon { font-size: 2rem; margin-bottom: 8px; }
-  .car-card .car-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
-  .car-card .car-km { font-size: 1.2rem; font-weight: 800; color: #2d3748; }
-  .car-card .car-km span { font-size: 0.75rem; font-weight: 500; color: #718096; }
-  .car-card .car-trips { font-size: 0.78rem; color: #718096; margin-top: 4px; }
+  .car-card .car-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; color: var(--txt); }
+  .car-card .car-km { font-size: 1.2rem; font-weight: 800; color: var(--txt); }
+  .car-card .car-km span { font-size: 0.75rem; font-weight: 500; color: var(--txt3); }
+  .car-card .car-trips { font-size: 0.78rem; color: var(--txt3); margin-top: 4px; }
   .car-unknown-km { font-size: 0.75rem; color: #c05621; background: #fffaf0; border: 1px solid #fbd38d; border-radius: 6px; padding: 2px 7px; margin-top: 6px; display: inline-block; font-weight: 600; }
 
   /* ── Forms ── */
-  .form-card { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,0.08); margin-bottom: 20px; }
-  .form-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: #2d3748; }
+  .form-card { background: var(--surf); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(12,30,61,0.06); margin-bottom: 18px; }
+  .form-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--txt); }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
   .form-group { display: flex; flex-direction: column; gap: 4px; }
   .form-group.full { grid-column: 1 / -1; }
-  label { font-size: 0.78rem; font-weight: 600; color: #4a5568; text-transform: uppercase; letter-spacing: 0.04em; }
+  label { font-size: 0.74rem; font-weight: 600; color: var(--txt2); text-transform: uppercase; letter-spacing: 0.04em; }
   input[type=text], input[type=number], input[type=date], input[type=password], select, textarea {
-    padding: 9px 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; font-size: 0.9rem; width: 100%;
-    transition: border-color 0.2s; background: white; color: #1a202c; font-family: inherit;
+    padding: 9px 12px; border: 1.5px solid var(--bdr); border-radius: 8px; font-size: 0.9rem; width: 100%;
+    transition: border-color 0.2s; background: var(--surf2); color: var(--txt); font-family: inherit;
   }
   textarea { resize: vertical; min-height: 80px; font-size: 0.8rem; }
-  input:focus, select:focus, textarea:focus { outline: none; border-color: #2b6cb0; }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background: white; }
 
   /* ── Buttons ── */
   .btn { display: inline-block; padding: 10px 20px; border-radius: 8px; border: none; cursor: pointer; font-weight: 700; font-size: 0.9rem; transition: all 0.2s; text-align: center; }
-  .btn-primary { background: #2b6cb0; color: white; }
-  .btn-primary:hover { background: #2c5282; }
-  .btn-ghost { background: #f7fafc; color: #4a5568; border: 1.5px solid #e2e8f0; }
-  .btn-ghost:hover { background: #edf2f7; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: var(--accent2); }
+  .btn-ghost { background: var(--surf2); color: var(--txt2); border: 1.5px solid var(--bdr); }
+  .btn-ghost:hover { background: #e4eef8; }
   .btn-block { width: 100%; margin-top: 10px; }
   .btn-sm { padding: 5px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.15s; }
   .btn-danger-sm { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
   .btn-danger-sm:hover { background: #fed7d7; }
-  .btn-edit-sm { background: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
-  .btn-edit-sm:hover { background: #bee3f8; }
+  .btn-edit-sm { background: #e0f2fe; color: var(--accent2); border: 1px solid #bae6fd; }
+  .btn-edit-sm:hover { background: #bae6fd; }
 
   /* ── Trips ── */
   .trip-list { display: flex; flex-direction: column; gap: 7px; }
-  .trip-item { background: white; border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); display: flex; align-items: center; gap: 14px; transition: opacity 0.2s; }
+  .trip-item { background: var(--surf); border-radius: 10px; padding: 12px 16px; box-shadow: 0 1px 2px rgba(12,30,61,0.05); display: flex; align-items: center; gap: 14px; transition: opacity 0.2s; }
   .trip-item.checked-trip { opacity: 0.5; }
   .trip-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
   .driver-chip { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.05rem; flex-shrink: 0; }
   .check-wrap { display: flex; align-items: center; cursor: pointer; flex-shrink: 0; }
-  .check-wrap input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: #38a169; }
-  .t-dest    { flex: 2.5; font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #1a202c; }
-  .t-date    { flex: 1.2; font-size: 0.8rem; color: #718096; white-space: nowrap; }
-  .t-driver  { flex: 1.3; font-size: 0.82rem; font-weight: 600; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .t-car     { flex: 1.5; font-size: 0.82rem; font-weight: 600; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .check-wrap input[type=checkbox] { width: 18px; height: 18px; cursor: pointer; accent-color: var(--accent); }
+  .t-dest    { flex: 2.5; font-weight: 700; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--txt); }
+  .t-date    { flex: 1.2; font-size: 0.8rem; color: var(--txt3); white-space: nowrap; }
+  .t-driver  { flex: 1.3; font-size: 0.82rem; font-weight: 600; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .t-car     { flex: 1.5; font-size: 0.82rem; font-weight: 600; color: var(--txt2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .t-goal    { flex: 1; }
   .t-status  { flex: 0.8; white-space: nowrap; }
   .t-km      { flex: 0; flex-shrink: 0; text-align: right; min-width: 80px; }
-  .km-diff   { font-size: 0.9rem; font-weight: 800; color: #1a202c; }
-  .vergoeding{ font-size: 0.72rem; font-weight: 700; color: #744210; background: #fefcbf; padding: 1px 7px; border-radius: 999px; display: inline-block; margin-top: 3px; }
+  .km-diff   { font-size: 0.9rem; font-weight: 800; color: var(--txt); }
+  .vergoeding{ font-size: 0.72rem; font-weight: 700; color: #92400e; background: #fef3c7; padding: 1px 7px; border-radius: 999px; display: inline-block; margin-top: 3px; }
   .badge { display: inline-flex; align-items: center; padding: 2px 9px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; white-space: nowrap; }
-  .badge-prive { background: #ebf8ff; color: #2b6cb0; }
-  .badge-werk  { background: #f0fff4; color: #276749; }
-  .badge-checked   { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: #f0fff4; color: #276749; white-space: nowrap; }
-  .badge-unchecked { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: #fff5f5; color: #c53030; white-space: nowrap; }
+  .badge-checked   { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: #f0fdf4; color: #16a34a; white-space: nowrap; }
+  .badge-unchecked { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; background: #fef2f2; color: #dc2626; white-space: nowrap; }
   @media (max-width: 620px) {
     .t-date, .t-car, .t-goal { display: none; }
     .t-dest   { flex: 1; }
-    .t-driver { flex: 1; font-size: 0.75rem; color: #718096; }
+    .t-driver { flex: 1; font-size: 0.75rem; color: var(--txt3); }
   }
+
   /* ── Stats ── */
   .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
   @media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
   @media (max-width: 480px) { .stats-grid { grid-template-columns: repeat(2, 1fr); } }
-  .stat-card { background: white; border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.07); text-align: center; }
-  .stat-val { font-size: 1.4rem; font-weight: 800; color: #2b6cb0; }
-  .stat-label { font-size: 0.72rem; color: #718096; margin-top: 2px; font-weight: 600; }
+  .stat-card { background: var(--surf); border-radius: 10px; padding: 14px; box-shadow: 0 1px 3px rgba(12,30,61,0.06); text-align: center; }
+  .stat-card.accent { background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+  .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--accent); }
+  .stat-card.accent .stat-val { color: white; }
+  .stat-label { font-size: 0.72rem; color: var(--txt3); margin-top: 2px; font-weight: 600; }
+  .stat-card.accent .stat-label { color: rgba(255,255,255,0.75); }
+  .stat-val.red { color: var(--red); }
+  .stat-label.red { color: var(--red); }
 
   /* ── Filters ── */
   .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
-  .filter-btn { padding: 6px 14px; border-radius: 999px; border: 1.5px solid #e2e8f0; background: white; font-size: 0.82rem; font-weight: 600; cursor: pointer; color: #4a5568; transition: all 0.15s; }
-  .filter-btn.active { background: #2b6cb0; color: white; border-color: #2b6cb0; }
+  .filter-btn { padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--bdr); background: var(--surf); font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--txt2); transition: all 0.15s; }
+  .filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 
-  .section-title { font-size: 0.85rem; font-weight: 700; color: #718096; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
+  .section-title { font-size: 0.85rem; font-weight: 700; color: var(--txt3); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px; }
 
   /* ── Settings ── */
-  .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 12px; border: 1.5px solid #e2e8f0; border-radius: 8px; flex-wrap: wrap; }
+  .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 12px; border: 1.5px solid var(--bdr); border-radius: 8px; flex-wrap: wrap; }
   .driver-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
-  .driver-stats { font-size: 0.78rem; color: #4a5568; background: #f7fafc; border-radius: 8px; padding: 8px 12px; margin-top: 6px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .driver-stats { font-size: 0.78rem; color: var(--txt2); background: var(--surf2); border-radius: 8px; padding: 8px 12px; margin-top: 6px; display: flex; gap: 16px; flex-wrap: wrap; }
   .driver-stat-item { display: flex; flex-direction: column; gap: 1px; }
-  .driver-stat-label { font-size: 0.68rem; color: #a0aec0; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
-  .driver-stat-val { font-weight: 800; color: #2d3748; font-size: 0.9rem; }
-  .tarief-box { display: flex; align-items: center; gap: 10px; padding: 14px; background: #fffbeb; border: 1.5px solid #f6e05e; border-radius: 10px; margin-bottom: 12px; flex-wrap: wrap; }
-  .divider { border: none; border-top: 1px solid #e2e8f0; margin: 14px 0; }
+  .driver-stat-label { font-size: 0.68rem; color: var(--txt3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .driver-stat-val { font-weight: 800; color: var(--txt); font-size: 0.9rem; }
+  .tarief-box { display: flex; align-items: center; gap: 10px; padding: 14px; background: #eff8ff; border: 1.5px solid #bae6fd; border-radius: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+  .divider { border: none; border-top: 1px solid var(--bdr); margin: 14px 0; }
 
   /* ── Setup screen ── */
-  .setup-overlay { position: fixed; inset: 0; background: rgba(26,54,93,0.97); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+  .setup-overlay { position: fixed; inset: 0; background: rgba(12,30,61,0.97); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
   .setup-box { background: white; border-radius: 16px; padding: 32px; max-width: 520px; width: 100%; box-shadow: 0 20px 60px rgba(0,0,0,0.4); }
-  .setup-box h2 { font-size: 1.3rem; font-weight: 800; color: #1a365d; margin-bottom: 6px; }
-  .setup-box .subtitle { font-size: 0.85rem; color: #718096; margin-bottom: 24px; }
-  .setup-step { display: flex; gap: 12px; margin-bottom: 14px; padding: 12px; background: #f7fafc; border-radius: 10px; align-items: flex-start; }
-  .setup-step-num { width: 26px; height: 26px; border-radius: 50%; background: #2b6cb0; color: white; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-  .setup-step p { font-size: 0.83rem; color: #4a5568; line-height: 1.5; }
-  .setup-step p strong { color: #1a202c; }
-  .setup-step a { color: #2b6cb0; font-weight: 600; }
+  .setup-box h2 { font-size: 1.3rem; font-weight: 800; color: var(--txt); margin-bottom: 6px; }
+  .setup-box .subtitle { font-size: 0.85rem; color: var(--txt3); margin-bottom: 24px; }
+  .setup-step { display: flex; gap: 12px; margin-bottom: 14px; padding: 12px; background: var(--surf2); border-radius: 10px; align-items: flex-start; }
+  .setup-step-num { width: 26px; height: 26px; border-radius: 50%; background: var(--accent); color: white; font-weight: 800; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .setup-step p { font-size: 0.83rem; color: var(--txt2); line-height: 1.5; }
+  .setup-step p strong { color: var(--txt); }
+  .setup-step a { color: var(--accent2); font-weight: 600; }
   .setup-input-group { margin-bottom: 12px; }
-  .setup-input-group label { display: block; font-size: 0.78rem; font-weight: 700; color: #4a5568; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .setup-input-group label { display: block; font-size: 0.78rem; font-weight: 700; color: var(--txt2); text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
   .setup-input-group input, .setup-input-group textarea { width: 100%; }
   .setup-error { color: #c53030; font-size: 0.82rem; margin-top: 8px; display: none; }
 
   /* ── Loading ── */
-  .loading-bar { text-align: center; padding: 60px 20px; color: #718096; }
-  .spinner { width: 36px; height: 36px; border: 4px solid #e2e8f0; border-top-color: #2b6cb0; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  .loading-bar { text-align: center; padding: 60px 20px; color: var(--txt3); }
+  .spinner { width: 36px; height: 36px; border: 4px solid var(--bdr); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* ── Firebase info box ── */
   .info-box { padding: 12px 16px; border-radius: 10px; font-size: 0.82rem; margin-bottom: 16px; }
-  .info-box.blue { background: #ebf8ff; color: #2c5282; border: 1px solid #bee3f8; }
-  .info-box.green { background: #f0fff4; color: #276749; border: 1px solid #c6f6d5; }
+  .info-box.blue { background: var(--surf2); color: var(--txt2); border: 1px solid var(--bdr); }
+  .info-box.green { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
 
   /* ── Betalingspopup ── */
-  .betaling-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .betaling-overlay { position:fixed; inset:0; background:rgba(12,30,61,0.5); z-index:2000; display:flex; align-items:center; justify-content:center; padding:20px; }
   .betaling-box { background:white; border-radius:16px; padding:28px; max-width:480px; width:100%; box-shadow:0 20px 60px rgba(0,0,0,0.3); max-height:80vh; overflow-y:auto; }
-  .betaling-box h2 { font-size:1.2rem; font-weight:800; color:#1a365d; margin-bottom:6px; }
-  .betaling-box .subtitle { font-size:0.82rem; color:#718096; margin-bottom:20px; }
-  .betaling-driver-row { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:#f7fafc; border-radius:10px; margin-bottom:8px; }
+  .betaling-box h2 { font-size:1.2rem; font-weight:800; color:var(--txt); margin-bottom:6px; }
+  .betaling-box .subtitle { font-size:0.82rem; color:var(--txt3); margin-bottom:20px; }
+  .betaling-driver-row { display:flex; align-items:center; justify-content:space-between; padding:12px 14px; background:var(--surf2); border-radius:10px; margin-bottom:8px; }
   .betaling-driver-row .name { font-weight:700; font-size:0.92rem; }
-  .betaling-driver-row .ritten { font-size:0.75rem; color:#718096; margin-top:1px; }
-  .betaling-driver-row .bedrag { font-size:1.1rem; font-weight:800; color:#2b6cb0; }
+  .betaling-driver-row .ritten { font-size:0.75rem; color:var(--txt3); margin-top:1px; }
+  .betaling-driver-row .bedrag { font-size:1.1rem; font-weight:800; color:var(--accent2); }
 
-  .empty-state { text-align: center; padding: 30px 20px; color: #a0aec0; }
+  .empty-state { text-align: center; padding: 30px 20px; color: var(--txt3); }
   .empty-state .es-icon { font-size: 2.5rem; margin-bottom: 8px; }
 
   /* ── Statistieken ── */
   .period-selector { display:flex; gap:8px; margin-bottom:20px; flex-wrap:wrap; align-items:center; }
-  .period-select { padding:8px 14px; border-radius:8px; border:1.5px solid #e2e8f0; font-size:0.85rem; font-weight:600; color:#4a5568; background:white; cursor:pointer; }
-  .stat-section { background:white; border-radius:12px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,0.08); margin-bottom:20px; }
-  .stat-section h3 { font-size:0.9rem; font-weight:700; color:#2d3748; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+  .period-select { padding:8px 14px; border-radius:8px; border:1.5px solid var(--bdr); font-size:0.85rem; font-weight:600; color:var(--txt2); background:white; cursor:pointer; }
+  .stat-section { background:var(--surf); border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(12,30,61,0.06); margin-bottom:20px; }
+  .stat-section h3 { font-size:0.9rem; font-weight:700; color:var(--txt); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
   .stat-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
-  .stat-table th { text-align:left; padding:8px 10px; font-size:0.72rem; font-weight:700; color:#718096; text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid #e2e8f0; }
-  .stat-table td { padding:9px 10px; border-bottom:1px solid #f0f4f8; color:#2d3748; }
+  .stat-table th { text-align:left; padding:8px 10px; font-size:0.72rem; font-weight:700; color:var(--txt3); text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--bdr); }
+  .stat-table td { padding:9px 10px; border-bottom:1px solid var(--surf2); color:var(--txt2); }
   .stat-table tr:last-child td { border-bottom:none; }
-  .stat-table tr:hover td { background:#f7fafc; }
+  .stat-table tr:hover td { background:var(--surf2); }
   .stat-table .num { text-align:right; font-weight:700; }
   .bar-wrap { display:flex; align-items:center; gap:8px; }
-  .bar { height:8px; border-radius:4px; background:#2b6cb0; min-width:2px; transition:width 0.3s; }
+  .bar { height:8px; border-radius:4px; background:var(--accent); min-width:2px; transition:width 0.3s; }
   .trophy { font-size:1.1rem; }
-  .fun-card { display:flex; align-items:flex-start; gap:12px; padding:12px; background:#f7fafc; border-radius:10px; margin-bottom:10px; }
+  .fun-card { display:flex; align-items:flex-start; gap:12px; padding:12px; background:var(--surf2); border-radius:10px; margin-bottom:10px; }
   .fun-card .fun-icon { font-size:1.6rem; flex-shrink:0; }
-  .fun-card .fun-title { font-weight:700; font-size:0.88rem; color:#2d3748; }
-  .fun-card .fun-val { font-size:0.82rem; color:#718096; margin-top:2px; }
-  .print-btn { background:#276749; color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:700; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; gap:8px; }
-  .print-btn:hover { background:#22543d; }
+  .fun-card .fun-title { font-weight:700; font-size:0.88rem; color:var(--txt); }
+  .fun-card .fun-val { font-size:0.82rem; color:var(--txt3); margin-top:2px; }
+  .print-btn { background:var(--accent2); color:white; border:none; padding:10px 20px; border-radius:8px; font-weight:700; font-size:0.9rem; cursor:pointer; display:flex; align-items:center; gap:8px; }
+  .print-btn:hover { background:#0369a1; }
   @media print {
-    .tabs, .header .sync-dot, .header .sync-label, .period-selector, .print-btn, #setup-overlay { display:none !important; }
-    .stat-section { box-shadow:none; border:1px solid #e2e8f0; break-inside:avoid; }
+    .sidebar, .bottom-nav, .topbar .sync-dot, .topbar .sync-label, .period-selector, .print-btn, #setup-overlay { display:none !important; }
+    .stat-section { box-shadow:none; border:1px solid var(--bdr); break-inside:avoid; }
     body { background:white; }
   }
 
-  @media (max-width: 600px) {
+  /* ── Mobile responsive: switch to bottom nav layout ── */
+  @media (max-width: 860px) {
+    .sidebar { display: none; }
+    .topbar { display: none; }
+    .app-shell { flex-direction: column; min-height: 100vh; }
+    .main-area { padding-bottom: 64px; }
+
+    .mobile-header { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: linear-gradient(135deg, var(--sid), var(--accent2)); color: white; }
+    .mobile-header-icon { width: 36px; height: 36px; border-radius: 9px; background: rgba(255,255,255,0.15); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .mobile-header-title { font-size: 0.95rem; font-weight: 800; line-height: 1.2; }
+    .mobile-header-sub { font-size: 0.68rem; opacity: 0.75; }
+    .mobile-sync-pill { margin-left: auto; background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2); border-radius: 999px; padding: 4px 10px 4px 8px; display: flex; align-items: center; gap: 5px; font-size: 0.66rem; font-weight: 600; color: rgba(255,255,255,0.9); white-space: nowrap; }
+    .mobile-sync-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+    .mobile-sync-dot.green  { background: #4ade80; box-shadow: 0 0 6px #4ade80; }
+    .mobile-sync-dot.orange { background: #fbbf24; box-shadow: 0 0 6px #fbbf24; }
+    .mobile-sync-dot.red    { background: #f87171; box-shadow: 0 0 6px #f87171; }
+
+    .bottom-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; background: var(--surf); border-top: 1px solid var(--bdr); padding: 6px 0 4px; z-index: 100; box-shadow: 0 -2px 10px rgba(12,30,61,0.06); }
+    .bottom-nav-item { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 0.6rem; font-weight: 600; color: var(--txt3); padding: 5px 2px; cursor: pointer; }
+    .bottom-nav-item.active { color: var(--accent2); }
+    .bottom-nav-icon { font-size: 17px; line-height: 1; }
+    .bottom-nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent2); margin: 0 auto -2px; }
+
+    .content { padding: 14px; }
     .form-grid { grid-template-columns: 1fr; }
     .form-group.full { grid-column: 1; }
-    .content { padding: 12px; }
     .period-selector { gap: 6px; }
     .period-selector .print-btn { width: 100%; justify-content: center; margin-left: 0; }
     .stat-table { font-size: 0.78rem; }
     .stat-table th, .stat-table td { padding: 6px 6px; }
   }
-</style>
+
+  /* Car horizontal scroll on mobile overview */
+  @media (max-width: 860px) {
+    .car-grid.scrollable { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 22px; scrollbar-width: none; }
+    .car-grid.scrollable .car-card { min-width: 150px; flex-shrink: 0; }
+  }
+
 </head>
 <body>
 
@@ -239,17 +298,85 @@
   </div>
 </div>
 
-<!-- ══════════════════════════════════════════════════════════ HEADER ══ -->
-<div class="header">
-  <span style="font-size:1.8rem;">🚗</span>
-  <div>
-    <h1>Familie Vetjens Autotracker</h1>
-    <div style="font-size:0.8rem;opacity:0.8;">Houd alle auto's bij op één plek</div>
+<!-- ══════════════════════════════════════════════════════════ APP SHELL ══ -->
+<div class="app-shell">
+
+  <!-- ── Sidebar (desktop) ── -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="sidebar-logo-icon">🚗</div>
+      <div>
+        <div class="sidebar-logo-name">Vetjens</div>
+        <div class="sidebar-logo-sub">Autotracker</div>
+      </div>
+    </div>
+    <div class="sidebar-item active" data-tab="overzicht" onclick="showTab('overzicht')"><span class="nav-ico">🏠</span> Overzicht</div>
+    <div class="sidebar-item" data-tab="toevoegen" onclick="showTab('toevoegen')"><span class="nav-ico">➕</span> Rit toevoegen</div>
+    <div class="sidebar-item" data-tab="ritten" onclick="showTab('ritten')"><span class="nav-ico">📋</span> Alle ritten <span class="sidebar-badge" id="sidebar-open-badge" style="display:none;"></span></div>
+    <div class="sidebar-item" data-tab="statistieken" onclick="showTab('statistieken')"><span class="nav-ico">📊</span> Statistieken</div>
+    <div class="sidebar-item" data-tab="instellingen" onclick="showTab('instellingen')"><span class="nav-ico">⚙️</span> Instellingen</div>
+    <div class="sidebar-divider"></div>
+    <div class="sidebar-section">Auto's</div>
+    <div id="sidebar-cars"></div>
+    <div class="sidebar-sync">
+      <div class="sidebar-sync-dot orange" id="sync-dot"></div>
+      <span id="sync-label">Verbinden…</span>
+    </div>
   </div>
-  <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
-    <div class="sync-dot orange" id="sync-dot"></div>
-    <span class="sync-label" id="sync-label">Verbinden…</span>
+
+  <!-- ── Mobile header ── -->
+  <div class="mobile-header">
+    <div class="mobile-header-icon">🚗</div>
+    <div>
+      <div class="mobile-header-title">Familie Vetjens</div>
+      <div class="mobile-header-sub">Autotracker</div>
+    </div>
+    <div class="mobile-sync-pill">
+      <div class="mobile-sync-dot orange" id="sync-dot-mobile"></div>
+      <span id="sync-label-mobile">Verbinden…</span>
+    </div>
   </div>
+
+  <div class="main-area">
+    <!-- ── Topbar (desktop) ── -->
+    <div class="topbar">
+      <div class="topbar-title" id="topbar-title">Overzicht</div>
+    </div>
+
+    <div class="content" id="app">
+      <div class="loading-bar"><div class="spinner"></div>Laden…</div>
+    </div>
+  </div>
+
+  <!-- ── Bottom nav (mobile) ── -->
+  <div class="bottom-nav">
+    <div class="bottom-nav-item active" data-tab="overzicht" onclick="showTab('overzicht')">
+      <div class="bottom-nav-icon">🏠</div>
+      <div class="bottom-nav-dot" style="visibility:visible;"></div>
+      <div>Overzicht</div>
+    </div>
+    <div class="bottom-nav-item" data-tab="toevoegen" onclick="showTab('toevoegen')">
+      <div class="bottom-nav-icon">➕</div>
+      <div class="bottom-nav-dot" style="visibility:hidden;"></div>
+      <div>Toevoegen</div>
+    </div>
+    <div class="bottom-nav-item" data-tab="ritten" onclick="showTab('ritten')">
+      <div class="bottom-nav-icon">📋</div>
+      <div class="bottom-nav-dot" style="visibility:hidden;"></div>
+      <div>Ritten</div>
+    </div>
+    <div class="bottom-nav-item" data-tab="statistieken" onclick="showTab('statistieken')">
+      <div class="bottom-nav-icon">📊</div>
+      <div class="bottom-nav-dot" style="visibility:hidden;"></div>
+      <div>Stats</div>
+    </div>
+    <div class="bottom-nav-item" data-tab="instellingen" onclick="showTab('instellingen')">
+      <div class="bottom-nav-icon">⚙️</div>
+      <div class="bottom-nav-dot" style="visibility:hidden;"></div>
+      <div>Inst.</div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ── BETALINGSPOPUP ── -->
@@ -257,7 +384,7 @@
   <div class="betaling-box">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
       <h2>💶 Betalingsoverzicht</h2>
-      <button onclick="toonBetalingHistorie()" style="font-size:0.78rem;font-weight:600;color:#2b6cb0;background:none;border:none;cursor:pointer;text-decoration:underline;">📋 Alle overzichten</button>
+      <button onclick="toonBetalingHistorie()" style="font-size:0.78rem;font-weight:600;color:#0ea5e9;background:none;border:none;cursor:pointer;text-decoration:underline;">📋 Alle overzichten</button>
     </div>
     <p class="subtitle" id="betaling-subtitle"></p>
     <div id="betaling-content"></div>
@@ -276,23 +403,11 @@
   <div class="betaling-box" style="max-width:560px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
       <h2>📋 Alle betalingsoverzichten</h2>
-      <button onclick="sluitHistoriePopup()" style="font-size:1.2rem;background:none;border:none;cursor:pointer;color:#718096;">✕</button>
+      <button onclick="sluitHistoriePopup()" style="font-size:1.2rem;background:none;border:none;cursor:pointer;color:#8fa8c2;">✕</button>
     </div>
     <div id="historie-content"></div>
     <button class="btn btn-ghost btn-block" style="margin-top:14px;" onclick="sluitHistoriePopup()">Sluiten</button>
   </div>
-</div>
-
-<div class="tabs">
-  <div class="tab active"  onclick="showTab('overzicht')">🏠 Overzicht</div>
-  <div class="tab"         onclick="showTab('toevoegen')">➕ Rit toevoegen</div>
-  <div class="tab"         onclick="showTab('ritten')">📋 Alle ritten</div>
-  <div class="tab"         onclick="showTab('statistieken')">📊 Statistieken</div>
-  <div class="tab"         onclick="showTab('instellingen')">⚙️ Instellingen</div>
-</div>
-
-<div class="content" id="app">
-  <div class="loading-bar"><div class="spinner"></div>Laden…</div>
 </div>
 
 <!-- ══════════════════════════════════════════════════════════ SCRIPT ══ -->
@@ -304,7 +419,7 @@ import { getDatabase, ref, onValue, set, remove, update }
   from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 // ─── CAR COLORS ─────────────────────────────────────────────────────────────
-const CAR_COLORS = ['#e53e3e','#d69e2e','#38a169','#805ad5','#2b6cb0','#dd6b20','#319795','#e53e7e'];
+const CAR_COLORS = ['#e53e3e','#d69e2e','#38a169','#805ad5','#0ea5e9','#dd6b20','#319795','#e53e7e'];
 
 // ─── STATE ───────────────────────────────────────────────────────────────────
 let db        = null;
@@ -332,12 +447,13 @@ const state = {
   ritten_view: 'lijst',  // 'lijst' of 'kalender'
   favBestemmingen: [],
   categories: [
-    { id: 'prive', label: 'Privé', icon: '🏠', color: '#ebf8ff', textColor: '#2b6cb0', vergoeding: true },
-    { id: 'werk',  label: 'Werk',  icon: '💼', color: '#f0fff4', textColor: '#276749', vergoeding: true },
+    { id: 'prive', label: 'Privé', icon: '🏠', color: '#e0f2fe', textColor: '#0369a1', vergoeding: true },
+    { id: 'werk',  label: 'Werk',  icon: '💼', color: '#dcfce7', textColor: '#15803d', vergoeding: true },
   ],
   nextCatId: 3,
   terugkerendeRitten: [],
   nextTerugkerendId: 1,
+  betalingHistorie: [],
   statYear: new Date().getFullYear(),
   statMonth: new Date().getMonth() + 1,
   statWeek: null,
@@ -361,6 +477,7 @@ function fmt(n)    { return Number(n).toLocaleString('nl-NL'); }
 function fmtEur(n) { return '€\u00A0' + Number(n).toLocaleString('nl-NL',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function getCarById(id)    { return state.cars.find(c => c.id === id); }
 function getDriverById(id) { return state.drivers.find(d => d.id === id); }
+function getCatById(id)    { return state.categories.find(c => c.id === id); }
 function co2ForTrip(t) {
   const car = getCarById(t.carId);
   const g = car && car.co2PerKm ? car.co2PerKm : 120;
@@ -369,16 +486,21 @@ function co2ForTrip(t) {
 
 function carColor(carId) {
   const idx = state.cars.findIndex(c => c.id === carId);
-  return CAR_COLORS[idx % CAR_COLORS.length] || '#cbd5e0';
+  return CAR_COLORS[idx % CAR_COLORS.length] || '#dbe7f3';
 }
 
 // ─── SYNC STATUS ─────────────────────────────────────────────────────────────
 function setSyncStatus(status) {
+  const map = { online:'green', saving:'orange', offline:'red', local:'orange' };
+  const labels = { online:'Live gesynchroniseerd', saving:'Opslaan…', offline:'Offline', local:'Lokaal opgeslagen' };
   const dot   = document.getElementById('sync-dot');
   const label = document.getElementById('sync-label');
-  if (!dot || !label) return;
-  dot.className   = 'sync-dot ' + { online:'green', saving:'orange', offline:'red', local:'orange' }[status];
-  label.textContent = { online:'Live gesynchroniseerd', saving:'Opslaan…', offline:'Offline', local:'Lokaal opgeslagen' }[status];
+  if (dot)   dot.className   = 'sidebar-sync-dot ' + map[status];
+  if (label) label.textContent = labels[status];
+  const dotM   = document.getElementById('sync-dot-mobile');
+  const labelM = document.getElementById('sync-label-mobile');
+  if (dotM)   dotM.className   = 'mobile-sync-dot ' + map[status];
+  if (labelM) labelM.textContent = status === 'online' ? 'Live' : (status === 'local' ? 'Lokaal' : labels[status]);
 }
 
 // ─── FIREBASE / LOCAL STORAGE ────────────────────────────────────────────────
@@ -386,7 +508,9 @@ const LS_KEY = 'vetjens_autotracker_v2';
 
 function saveLocal() {
   const data = { cars: state.cars, drivers: state.drivers, trips: state.trips,
-    tarief: state.tarief, nextCarId: state.nextCarId, nextDriverId: state.nextDriverId, nextTripId: state.nextTripId };
+    tarief: state.tarief, nextCarId: state.nextCarId, nextDriverId: state.nextDriverId, nextTripId: state.nextTripId,
+    categories: state.categories, favBestemmingen: state.favBestemmingen, terugkerendeRitten: state.terugkerendeRitten,
+    nextCatId: state.nextCatId, nextTerugkerendId: state.nextTerugkerendId, betalingHistorie: state.betalingHistorie };
   localStorage.setItem(LS_KEY, JSON.stringify(data));
   setSyncStatus('local');
 }
@@ -397,7 +521,10 @@ function loadLocal() {
     if (raw) {
       const d = JSON.parse(raw);
       Object.assign(state, { cars: d.cars||[], drivers: d.drivers||[], trips: d.trips||[],
-        tarief: d.tarief||0.20, nextCarId: d.nextCarId||1, nextDriverId: d.nextDriverId||1, nextTripId: d.nextTripId||1 });
+        tarief: d.tarief||0.20, nextCarId: d.nextCarId||1, nextDriverId: d.nextDriverId||1, nextTripId: d.nextTripId||1,
+        categories: d.categories || state.categories, favBestemmingen: d.favBestemmingen||[],
+        terugkerendeRitten: d.terugkerendeRitten||[], nextCatId: d.nextCatId||3, nextTerugkerendId: d.nextTerugkerendId||1,
+        betalingHistorie: d.betalingHistorie||[] });
       if (!state.cars.length)    { state.cars    = DEFAULT_CARS;    state.nextCarId    = 5; }
       if (!state.drivers.length) { state.drivers = DEFAULT_DRIVERS; state.nextDriverId = 3; }
     } else {
@@ -427,6 +554,7 @@ async function pushToFirebase() {
       terugkerendeRitten:  state.terugkerendeRitten,
       nextCatId:           state.nextCatId,
       nextTerugkerendId:   state.nextTerugkerendId,
+      betalingHistorie:    state.betalingHistorie,
     });
     setSyncStatus('online');
   } catch(e) {
@@ -452,6 +580,8 @@ function subscribeFirebase() {
       state.terugkerendeRitten = d.terugkerendeRitten || [];
       state.nextCatId          = d.nextCatId          || 3;
       state.nextTerugkerendId  = d.nextTerugkerendId  || 1;
+      state.betalingHistorie   = d.betalingHistorie   || [];
+      migreerBetalingHistorie();
     } else {
       // First run — push defaults
       state.cars    = DEFAULT_CARS;    state.nextCarId    = 5;
@@ -531,11 +661,28 @@ async function tryAutoConnect() {
 }
 
 // ─── NAVIGATION ──────────────────────────────────────────────────────────────
+const TAB_TITLES = {
+  overzicht: 'Overzicht', toevoegen: 'Rit toevoegen', ritten: 'Alle ritten',
+  bewerken: 'Rit bewerken', statistieken: 'Statistieken', instellingen: 'Instellingen',
+};
+const NAV_TABS = ['overzicht','toevoegen','ritten','statistieken','instellingen'];
+
 function showTab(tab) {
   state.activeTab = tab;
-  document.querySelectorAll('.tab').forEach((el, i) => {
-    el.classList.toggle('active', ['overzicht','toevoegen','ritten','statistieken','instellingen'].includes(tab) && ['overzicht','toevoegen','ritten','statistieken','instellingen'][i] === tab);
+  // De 'bewerken' tab heeft geen eigen nav-item; markeer 'ritten' als actief context
+  const navMatch = tab === 'bewerken' ? 'ritten' : tab;
+  document.querySelectorAll('.sidebar-item[data-tab]').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === navMatch);
   });
+  document.querySelectorAll('.bottom-nav-item[data-tab]').forEach(el => {
+    const isActive = el.dataset.tab === navMatch;
+    el.classList.toggle('active', isActive);
+    const dot = el.querySelector('.bottom-nav-dot');
+    if (dot) dot.style.visibility = isActive ? 'visible' : 'hidden';
+  });
+  const topbarTitle = document.getElementById('topbar-title');
+  if (topbarTitle) topbarTitle.textContent = TAB_TITLES[tab] || '';
+  window.scrollTo({ top: 0, behavior: 'instant' });
   render();
 }
 window.showTab = showTab;
@@ -685,6 +832,9 @@ function submitEditTrip() {
   trip.vergoeding = +(diff * trip.tariefSnapshot).toFixed(2);
   trip.dest       = dest;
   trip.goal       = goal;
+  // Werk teltMee bij op basis van de (mogelijk gewijzigde) categorie
+  const catVoorRit = getCatById(goal);
+  if (catVoorRit && catVoorRit.vergoeding === false) trip.teltMee = false;
 
   // Herbereken km-stand van de auto op basis van hoogste eindstand
   const car = getCarById(carId);
@@ -766,7 +916,7 @@ function filterFavBest(val) {
   if (!matches.length) { box.style.display = 'none'; return; }
   box.innerHTML = matches.map(b =>
     `<div onclick="kiesBestemming('${b.replace(/'/g,"\'")}') " style="padding:8px 12px;cursor:pointer;font-size:0.85rem;border-bottom:1px solid #f0f4f8;"
-      onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='white'">${b}</div>`
+      onmouseover="this.style.background='#eef5fc'" onmouseout="this.style.background='white'">${b}</div>`
   ).join('');
   box.style.display = 'block';
 }
@@ -881,7 +1031,7 @@ window.applyTarief = applyTarief;
 // ── Categorie functies ──
 function addCat() {
   const id = 'cat_' + state.nextCatId++;
-  state.categories.push({ id, label: 'Nieuw', icon: '🏷️', color: '#f7fafc', textColor: '#4a5568', vergoeding: true });
+  state.categories.push({ id, label: 'Nieuw', icon: '🏷️', color: '#eef5fc', textColor: '#2c4a6e', vergoeding: true });
   pushToFirebase(); render();
 }
 window.addCat = addCat;
@@ -991,17 +1141,10 @@ function renderOverview() {
   const privKm     = state.trips.filter(t=>t.goal==='prive').reduce((a,t)=>a+t.diff,0);
   const werkKm     = state.trips.filter(t=>t.goal==='werk').reduce((a,t)=>a+t.diff,0);
   const openCount  = state.trips.filter(t=>!t.checked).length;
+  const co2Total   = state.trips.reduce((a,t)=>a+co2ForTrip(t),0);
 
   const carCards = state.cars.map(c => {
     const ct = state.trips.filter(t=>t.carId===c.id);
-    const registeredKm = ct.reduce((a,t)=>a+t.diff,0);
-    const unknownKm = Math.max(0, c.currentKm - (ct.length > 0 ? ct[0].km : c.currentKm) + registeredKm - registeredKm);
-    // Bereken onbekende km: verschil tussen huidige tellerstand en som van alle ritten voor deze auto
-    const highestRegistered = ct.length > 0 ? Math.max(...ct.map(t=>t.km)) : (c.currentKm);
-    const unaccounted = Math.max(0, c.currentKm - highestRegistered + ct.reduce((a,t) => {
-      // tel gaten op tussen opeenvolgende ritten gesorteerd op eindstand
-      return a;
-    }, 0));
     // Simpelere berekening: som van alle gaten (beginstand rit N > eindstand rit N-1)
     const sortedTrips = [...ct].sort((a,b)=>a.km-b.km);
     let gaps = 0;
@@ -1028,16 +1171,26 @@ function renderOverview() {
        <div class="trip-list">${state.trips.slice(0,5).map(renderTripItem).join('')}</div>`
     : `<div class="empty-state"><div class="es-icon">🛣️</div>Nog geen ritten geregistreerd.<br>Voeg je eerste rit toe!</div>`;
 
+  const co2Card = totalKm > 0 ? `
+  <div class="form-card" style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+    <div style="font-size:2rem;">🌿</div>
+    <div>
+      <div class="section-title" style="margin-bottom:3px;">CO₂ uitstoot totaal</div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--accent);">${co2Total.toFixed(0)} kg CO₂</div>
+    </div>
+  </div>` : '';
+
   return `
   <div class="stats-grid">
-    <div class="stat-card"><div class="stat-val">${fmt(totalKm)}</div><div class="stat-label">Totaal km gereden</div></div>
+    <div class="stat-card accent"><div class="stat-val">${fmt(totalKm)}</div><div class="stat-label">Totaal km gereden</div></div>
     <div class="stat-card"><div class="stat-val">${totalTrips}</div><div class="stat-label">Ritten geregistreerd</div></div>
-    <div class="stat-card"><div class="stat-val">${openCount}</div><div class="stat-label">Nog te controleren</div></div>
+    <div class="stat-card"><div class="stat-val red">${openCount}</div><div class="stat-label red">Nog te controleren</div></div>
     <div class="stat-card"><div class="stat-val">${fmt(privKm)}</div><div class="stat-label">Privé km</div></div>
     <div class="stat-card"><div class="stat-val">${fmt(werkKm)}</div><div class="stat-label">Werk km</div></div>
   </div>
   <div class="section-title">Auto's</div>
-  <div class="car-grid">${carCards}</div>
+  <div class="car-grid scrollable">${carCards}</div>
+  ${co2Card}
   ${recent}`;
 }
 
@@ -1069,7 +1222,7 @@ function renderAdd() {
         <label>Bestemming</label>
         <div style="position:relative;">
           <input type="text" id="f-dest" placeholder="bijv. Amsterdam, Supermarkt, Werk..." oninput="filterFavBest(this.value)" autocomplete="off">
-          <div id="fav-suggestions" style="position:absolute;top:100%;left:0;right:0;background:white;border:1.5px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;display:none;max-height:180px;overflow-y:auto;"></div>
+          <div id="fav-suggestions" style="position:absolute;top:100%;left:0;right:0;background:white;border:1.5px solid #dbe7f3;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;display:none;max-height:180px;overflow-y:auto;"></div>
         </div>
       </div>
       <div class="form-group">
@@ -1117,7 +1270,7 @@ function renderAdd() {
           <input type="number" id="f-km-gereden" placeholder="bijv. 43" min="1" oninput="showKmPreviewGereden()">
         </div>
         <div class="form-group" style="justify-content:flex-end;">
-          <div id="km-preview-gereden" style="font-size:0.8rem;color:#718096;padding-top:26px;"></div>
+          <div id="km-preview-gereden" style="font-size:0.8rem;color:#8fa8c2;padding-top:26px;"></div>
         </div>
       </div>
       <div style="margin-top:6px;padding:8px 12px;background:#fff5f5;border-radius:8px;font-size:0.78rem;color:#c53030;border:1px solid #fed7d7;">
@@ -1132,15 +1285,15 @@ function renderAdd() {
     <button class="btn btn-primary btn-block" onclick="submitAddTrip()">✅ Rit opslaan</button>
 
     ${state.terugkerendeRitten.length > 0 ? `
-    <hr style="border:none;border-top:1px solid #e2e8f0;margin:16px 0;">
-    <div style="font-size:0.82rem;font-weight:700;color:#4a5568;margin-bottom:8px;">📅 Snel toevoegen uit vaste ritten</div>
+    <hr style="border:none;border-top:1px solid #dbe7f3;margin:16px 0;">
+    <div style="font-size:0.82rem;font-weight:700;color:#2c4a6e;margin-bottom:8px;">📅 Snel toevoegen uit vaste ritten</div>
     <div style="display:flex;flex-direction:column;gap:6px;">
       ${state.terugkerendeRitten.map(r => {
         const d = state.drivers.find(x=>x.id===r.driverId);
         const c = state.cars.find(x=>x.id===r.carId);
         const cat = state.categories.find(x=>x.id===r.goal);
-        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#f7fafc;border-radius:8px;border:1px solid #e2e8f0;">
-          <div style="flex:1;font-size:0.82rem;"><strong>${r.dest}</strong> <span style="color:#718096;">· ${d?d.name:'?'} · ${c?c.icon+' '+c.name:'?'} · ${cat?cat.icon+' '+cat.label:'?'}${r.km?` · ${fmt(r.km)} km`:''}</span></div>
+        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;background:#eef5fc;border-radius:8px;border:1px solid #dbe7f3;">
+          <div style="flex:1;font-size:0.82rem;"><strong>${r.dest}</strong> <span style="color:#8fa8c2;">· ${d?d.name:'?'} · ${c?c.icon+' '+c.name:'?'} · ${cat?cat.icon+' '+cat.label:'?'}${r.km?` · ${fmt(r.km)} km`:''}</span></div>
           <button class="btn-sm btn-ghost" onclick="gebruikVasteRit(${r.id})" style="white-space:nowrap;">↩ Gebruik</button>
           <button class="btn-sm btn-danger-sm" onclick="verwijderVasteRit(${r.id})">🗑</button>
         </div>`;
@@ -1156,11 +1309,14 @@ function renderTripItem(t) {
   const car         = getCarById(t.carId);
   const driver      = getDriverById(t.driverId);
   const dotColor    = carColor(t.carId);
-  const driverColor = driver ? (driver.color || '#e2e8f0') : '#e2e8f0';
+  const driverColor = driver ? (driver.color || '#dbe7f3') : '#dbe7f3';
   const driverEmoji = driver ? driver.emoji : '👤';
   const driverName  = driver ? driver.name  : '—';
   const carLabel    = car ? car.icon + ' ' + car.name : '—';
-  const goalBadge   = `<span class="badge badge-${t.goal}">${t.goal==='prive'?'🏠 Privé':'💼 Werk'}</span>`;
+  const cat         = getCatById(t.goal);
+  const goalBadge   = cat
+    ? `<span class="badge" style="background:${cat.color};color:${cat.textColor};">${cat.icon} ${cat.label}</span>`
+    : `<span class="badge" style="background:#eef5fc;color:#8fa8c2;">🏷️ ${t.goal || '—'}</span>`;
   const statusBadge = t.checked
     ? '<span class="badge-checked">✔ OK</span>'
     : '<span class="badge-unchecked">○ Open</span>';
@@ -1168,7 +1324,7 @@ function renderTripItem(t) {
     <label class="check-wrap"><input type="checkbox" ${t.checked?'checked':''} onchange="toggleChecked(${t.id})"></label>
     <div class="trip-dot" style="background:${dotColor};"></div>
     <div class="driver-chip" style="background:${driverColor};">${driverEmoji}</div>
-    <div class="t-dest">${t.dest}${t.notitie?`<span style="font-size:0.7rem;color:#a0aec0;font-weight:400;margin-left:6px;">📝 ${t.notitie}</span>`:''}${t.route?`<span style="font-size:0.7rem;color:#a0aec0;font-weight:400;margin-left:6px;">🗺️ ${t.route}</span>`:''}
+    <div class="t-dest">${t.dest}${t.notitie?`<span style="font-size:0.7rem;color:#8fa8c2;font-weight:400;margin-left:6px;">📝 ${t.notitie}</span>`:''}${t.route?`<span style="font-size:0.7rem;color:#8fa8c2;font-weight:400;margin-left:6px;">🗺️ ${t.route}</span>`:''}
     </div>
     <div class="t-goal">${goalBadge}</div>
     <div class="t-date">${t.date}</div>
@@ -1179,7 +1335,7 @@ function renderTripItem(t) {
       <div class="km-diff">+${fmt(t.diff)} km</div>
       ${t.teltMee !== false
         ? `<div class="vergoeding" style="cursor:pointer;" onclick="toggleTeltMee(${t.id})" title="Klik om uit te sluiten van vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`
-        : `<div class="vergoeding" style="background:#f7fafc;color:#a0aec0;text-decoration:line-through;cursor:pointer;" onclick="toggleTeltMee(${t.id})" title="Klik om mee te nemen in vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`}
+        : `<div class="vergoeding" style="background:#eef5fc;color:#8fa8c2;text-decoration:line-through;cursor:pointer;" onclick="toggleTeltMee(${t.id})" title="Klik om mee te nemen in vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`}
       <div style="font-size:0.68rem;color:#276749;white-space:nowrap;">🌿 ${co2ForTrip(t)} kg CO₂</div>
     </div>
     <button class="btn-sm btn-edit-sm" onclick="openEditTrip(${t.id})" style="flex-shrink:0;" title="Bewerken">✏️</button>
@@ -1219,7 +1375,7 @@ function renderTrips() {
   ).join('');
 
   const summary = f.length > 0
-    ? `<div style="display:flex;gap:16px;margin-bottom:12px;font-size:0.82rem;color:#4a5568;font-weight:600;flex-wrap:wrap;">
+    ? `<div style="display:flex;gap:16px;margin-bottom:12px;font-size:0.82rem;color:#2c4a6e;font-weight:600;flex-wrap:wrap;">
         <span>📊 ${f.length} rit${f.length!==1?'ten':''}</span>
         <span>📍 ${fmt(totalKm)} km</span>
         <span>💶 ${fmtEur(totalVerg)}</span>
@@ -1229,7 +1385,7 @@ function renderTrips() {
   <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
     <input type="text" placeholder="🔍 Zoek op bestemming, bestuurder, auto..." value="${state.searchQuery}"
       oninput="setSearch(this.value)"
-      style="flex:1;padding:9px 14px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:0.88rem;">
+      style="flex:1;padding:9px 14px;border:1.5px solid #dbe7f3;border-radius:8px;font-size:0.88rem;">
     <button class="filter-btn ${state.ritten_view==='lijst'?'active':''}" onclick="setRittenView('lijst')">☰ Lijst</button>
     <button class="filter-btn ${state.ritten_view==='kalender'?'active':''}" onclick="setRittenView('kalender')">📅 Kalender</button>
   </div>
@@ -1242,9 +1398,9 @@ function renderTrips() {
     <button class="filter-btn ${state.filterChecked==='open'?'active':''}"    onclick="setFilter('checked','open')">○ Open</button>
     <button class="filter-btn ${state.filterChecked==='checked'?'active':''}" onclick="setFilter('checked','checked')">✔ Gecontroleerd</button>
     <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-      <label style="font-size:0.78rem;font-weight:600;color:#4a5568;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">👤 Bestuurder</label>
+      <label style="font-size:0.78rem;font-weight:600;color:#2c4a6e;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">👤 Bestuurder</label>
       <select onchange="setFilter('driver',this.value)"
-        style="padding:6px 10px;border-radius:8px;border:1.5px solid #e2e8f0;font-size:0.82rem;font-weight:600;color:#4a5568;background:white;cursor:pointer;min-width:140px;">
+        style="padding:6px 10px;border-radius:8px;border:1.5px solid #dbe7f3;font-size:0.82rem;font-weight:600;color:#2c4a6e;background:white;cursor:pointer;min-width:140px;">
         <option value="all" ${state.filterDriverId==='all'?'selected':''}>Alle bestuurders</option>
         ${driverOpts}
       </select>
@@ -1269,7 +1425,7 @@ function renderSettings() {
   const backupSection = `
   <div class="form-card">
     <h2>🔄 Backup & herstel</h2>
-    <p style="font-size:0.82rem;color:#718096;margin-bottom:14px;">Download een backup van alle gegevens of herstel een eerdere backup.</p>
+    <p style="font-size:0.82rem;color:#8fa8c2;margin-bottom:14px;">Download een backup van alle gegevens of herstel een eerdere backup.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-primary" style="flex:1;" onclick="maakBackup()">⬇️ Backup downloaden</button>
       <button class="btn btn-ghost" style="flex:1;" onclick="herstelBackup()">⬆️ Backup herstellen</button>
@@ -1277,7 +1433,7 @@ function renderSettings() {
   </div>
   <div class="form-card">
     <h2>💶 Betalingsoverzicht</h2>
-    <p style="font-size:0.82rem;color:#718096;margin-bottom:14px;">Elke zondag verschijnt automatisch een popup met het totaalbedrag per bestuurder. Sla het overzicht handmatig op via de knop in de popup, of open het op elk moment hieronder.</p>
+    <p style="font-size:0.82rem;color:#8fa8c2;margin-bottom:14px;">Elke zondag verschijnt automatisch een popup met het totaalbedrag per bestuurder. Sla het overzicht handmatig op via de knop in de popup, of open het op elk moment hieronder.</p>
     <div style="display:flex;gap:8px;flex-wrap:wrap;">
       <button class="btn btn-primary" style="flex:1;" onclick="toonBetalingOverzicht()">💶 Huidig overzicht</button>
       <button class="btn btn-ghost" style="flex:1;" onclick="toonBetalingHistorie()">📋 Alle overzichten</button>
@@ -1298,7 +1454,7 @@ function renderSettings() {
         <button class="btn btn-sm btn-ghost" onclick="applyTarief()" style="margin-left:4px;">Opslaan</button>
       </div>
     </div>
-    <p id="tarief-note" style="font-size:0.78rem;color:#a0aec0;">
+    <p id="tarief-note" style="font-size:0.78rem;color:#8fa8c2;">
       💡 Het nieuwe tarief geldt alleen voor ritten die je <strong>na</strong> het opslaan toevoegt. Bestaande ritten blijven ongewijzigd.
     </p>
   </div>`;
@@ -1309,7 +1465,7 @@ function renderSettings() {
     const dKm  = dt.reduce((a,t)=>a+t.diff,0);
     const dVrg = dt.reduce((a,t)=>a+t.vergoeding,0);
     const emojis = driverEmojis.map(em=>
-      `<span style="cursor:pointer;font-size:1.1rem;padding:2px;border-radius:4px;${d.emoji===em?'outline:2px solid #2b6cb0;':''}"
+      `<span style="cursor:pointer;font-size:1.1rem;padding:2px;border-radius:4px;${d.emoji===em?'outline:2px solid #0ea5e9;':''}"
         onclick="updateDriver(${d.id},'emoji','${em}');render()">${em}</span>`
     ).join('');
     return `<div class="settings-row" style="flex-direction:column;align-items:stretch;">
@@ -1317,14 +1473,14 @@ function renderSettings() {
         <div class="driver-avatar" style="background:${d.color};">${d.emoji}</div>
         <input type="text" value="${d.name}" onchange="updateDriver(${d.id},'name',this.value)" style="flex:1;min-width:100px;font-weight:600;" placeholder="Naam">
         <input type="color" value="${d.color.startsWith('#')?d.color:'#bee3f8'}" onchange="updateDriver(${d.id},'color',this.value);render()"
-          title="Kleur" style="width:36px;height:36px;padding:2px;border:1.5px solid #e2e8f0;border-radius:6px;cursor:pointer;">
+          title="Kleur" style="width:36px;height:36px;padding:2px;border:1.5px solid #dbe7f3;border-radius:6px;cursor:pointer;">
         <button class="btn-sm btn-danger-sm" onclick="removeDriver(${d.id})">🗑 Verwijder</button>
       </div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">${emojis}</div>
       <div class="driver-stats">
         <div class="driver-stat-item"><div class="driver-stat-label">Ritten</div><div class="driver-stat-val">${dt.length}</div></div>
         <div class="driver-stat-item"><div class="driver-stat-label">Km gereden</div><div class="driver-stat-val">${fmt(dKm)} km</div></div>
-        <div class="driver-stat-item"><div class="driver-stat-label">Totale vergoeding</div><div class="driver-stat-val" style="color:#2b6cb0;">${fmtEur(dVrg)}</div></div>
+        <div class="driver-stat-item"><div class="driver-stat-label">Totale vergoeding</div><div class="driver-stat-val" style="color:#0ea5e9;">${fmtEur(dVrg)}</div></div>
       </div>
     </div>`;
   }).join('');
@@ -1341,18 +1497,18 @@ function renderSettings() {
   const carRows = state.cars.map(c => {
     const color = carColor(c.id);
     const icons = carIconOptions.map(em=>
-      `<span style="cursor:pointer;font-size:1.1rem;padding:2px;border-radius:4px;${c.icon===em?'outline:2px solid #2b6cb0;':''}"
+      `<span style="cursor:pointer;font-size:1.1rem;padding:2px;border-radius:4px;${c.icon===em?'outline:2px solid #0ea5e9;':''}"
         onclick="updateCar(${c.id},'icon','${em}');render()">${em}</span>`
     ).join('');
     return `<div class="settings-row" style="border-left:4px solid ${color};">
       <div style="font-size:1.5rem;flex-shrink:0;">${c.icon}</div>
       <input type="text" value="${c.name}" onchange="updateCar(${c.id},'name',this.value)" style="flex:1;min-width:80px;font-weight:700;" placeholder="Auto naam">
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        <label style="font-size:0.78rem;color:#718096;text-transform:none;letter-spacing:0;white-space:nowrap;">Begin km:</label>
+        <label style="font-size:0.78rem;color:#8fa8c2;text-transform:none;letter-spacing:0;white-space:nowrap;">Begin km:</label>
         <input type="number" value="${c.currentKm}" onchange="updateCar(${c.id},'currentKm',this.value)" style="width:90px;text-align:right;">
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        <label style="font-size:0.78rem;color:#718096;text-transform:none;letter-spacing:0;white-space:nowrap;">🌿 g CO₂/km:</label>
+        <label style="font-size:0.78rem;color:#8fa8c2;text-transform:none;letter-spacing:0;white-space:nowrap;">🌿 g CO₂/km:</label>
         <input type="number" value="${c.co2PerKm||120}" onchange="updateCar(${c.id},'co2PerKm',parseInt(this.value)||120)" style="width:70px;text-align:right;" min="0" max="500">
       </div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;">${icons}</div>
@@ -1376,19 +1532,19 @@ function renderSettings() {
       <input type="text" value="${cat.label}" onchange="updateCat('${cat.id}','label',this.value)"
         style="flex:1;min-width:80px;font-weight:600;">
       <input type="color" value="${cat.color}" onchange="updateCat('${cat.id}','color',this.value)"
-        title="Achtergrondkleur" style="width:36px;height:36px;padding:2px;border:1.5px solid #e2e8f0;border-radius:6px;cursor:pointer;">
-      <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:600;color:#4a5568;text-transform:none;letter-spacing:0;cursor:pointer;white-space:nowrap;">
+        title="Achtergrondkleur" style="width:36px;height:36px;padding:2px;border:1.5px solid #dbe7f3;border-radius:6px;cursor:pointer;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:600;color:#2c4a6e;text-transform:none;letter-spacing:0;cursor:pointer;white-space:nowrap;">
         <input type="checkbox" ${cat.vergoeding !== false ? 'checked' : ''} onchange="updateCat('${cat.id}','vergoeding',this.checked);pushToFirebase()"
-          style="width:16px;height:16px;accent-color:#2b6cb0;">
+          style="width:16px;height:16px;accent-color:#0ea5e9;">
         Meetellen in vergoeding
       </label>
-      ${cat.id !== 'prive' && cat.id !== 'werk' ? `<button class="btn-sm btn-danger-sm" onclick="removeCat('${cat.id}')">🗑 Verwijder</button>` : '<span style="font-size:0.72rem;color:#a0aec0;">Standaard</span>'}
+      ${cat.id !== 'prive' && cat.id !== 'werk' ? `<button class="btn-sm btn-danger-sm" onclick="removeCat('${cat.id}')">🗑 Verwijder</button>` : '<span style="font-size:0.72rem;color:#8fa8c2;">Standaard</span>'}
     </div>`).join('');
 
   const catsSection = `
   <div class="form-card">
     <h2>🏷️ Categorieën</h2>
-    <p style="font-size:0.78rem;color:#a0aec0;margin-bottom:12px;">💡 Zet "Meetellen in vergoeding" uit voor een categorie om ritten in die categorie standaard uit te sluiten van betalingen. Per individuele rit kun je dit ook aanpassen via het vergoedingsbedrag in de rittenlijst (klik erop).</p>
+    <p style="font-size:0.78rem;color:#8fa8c2;margin-bottom:12px;">💡 Zet "Meetellen in vergoeding" uit voor een categorie om ritten in die categorie standaard uit te sluiten van betalingen. Per individuele rit kun je dit ook aanpassen via het vergoedingsbedrag in de rittenlijst (klik erop).</p>
     ${catRows}
     <hr class="divider">
     <button class="btn btn-ghost btn-block" onclick="addCat()">➕ Categorie toevoegen</button>
@@ -1400,7 +1556,7 @@ function renderSettings() {
     <h2>📍 Favoriete bestemmingen</h2>
     <div style="display:flex;flex-direction:column;gap:6px;">
       ${state.favBestemmingen.map((b,i) => `
-        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#f7fafc;border-radius:8px;">
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 10px;background:#eef5fc;border-radius:8px;">
           <span style="flex:1;font-size:0.85rem;">📍 ${b}</span>
           <button class="btn-sm btn-danger-sm" onclick="verwijderFavBest(${i})">🗑</button>
         </div>`).join('')}
@@ -1435,7 +1591,7 @@ function renderKalender(trips, year, month) {
   });
 
   const dagHeaders = ['Ma','Di','Wo','Do','Vr','Za','Zo'].map(d =>
-    `<div style="text-align:center;font-size:0.72rem;font-weight:700;color:#718096;padding:4px;">${d}</div>`
+    `<div style="text-align:center;font-size:0.72rem;font-weight:700;color:#8fa8c2;padding:4px;">${d}</div>`
   ).join('');
 
   let cells = '';
@@ -1448,9 +1604,9 @@ function renderKalender(trips, year, month) {
       return `<div style="width:7px;height:7px;border-radius:50%;background:${color};flex-shrink:0;"></div>`;
     }).join('');
     const totKm = ritten.reduce((a,t)=>a+t.diff,0);
-    cells += `<div onclick="kalenderDagKlik(${y},${m},${d})" style="border:1.5px solid ${isVandaag?'#2b6cb0':'#e2e8f0'};border-radius:8px;padding:6px;cursor:pointer;min-height:64px;background:${ritten.length?'white':'#fafafa'};transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='none'">
-      <div style="font-size:0.78rem;font-weight:${isVandaag?'800':'600'};color:${isVandaag?'#2b6cb0':'#2d3748'};">${d}</div>
-      ${ritten.length ? `<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px;">${dots}</div><div style="font-size:0.65rem;color:#718096;margin-top:2px;">${totKm} km</div>` : ''}
+    cells += `<div onclick="kalenderDagKlik(${y},${m},${d})" style="border:1.5px solid ${isVandaag?'#0ea5e9':'#dbe7f3'};border-radius:8px;padding:6px;cursor:pointer;min-height:64px;background:${ritten.length?'white':'#fafafa'};transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseout="this.style.boxShadow='none'">
+      <div style="font-size:0.78rem;font-weight:${isVandaag?'800':'600'};color:${isVandaag?'#0ea5e9':'#0c1e3d'};">${d}</div>
+      ${ritten.length ? `<div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px;">${dots}</div><div style="font-size:0.65rem;color:#8fa8c2;margin-top:2px;">${totKm} km</div>` : ''}
     </div>`;
   }
 
@@ -1607,7 +1763,7 @@ function renderStatistieken() {
         <td class="num">${r.trips}</td>
         <td class="num">${fmt(r.km)} km</td>
         <td class="num">${fmtEur(r.verg)}</td>
-        <td><div class="bar-wrap"><div class="bar" style="width:${r.pct}px;background:${r.color};max-width:100px;"></div><span style="font-size:0.78rem;color:#718096;">${r.pct}%</span></div></td>
+        <td><div class="bar-wrap"><div class="bar" style="width:${r.pct}px;background:${r.color};max-width:100px;"></div><span style="font-size:0.78rem;color:#8fa8c2;">${r.pct}%</span></div></td>
       </tr>`).join('')}
     </table>
   </div>`;
@@ -1757,10 +1913,10 @@ function renderStatistieken() {
     <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
       <div style="text-align:center;">
         <div style="font-size:2rem;font-weight:800;color:#276749;">${co2Total} kg</div>
-        <div style="font-size:0.78rem;color:#718096;margin-top:2px;">Totale CO₂ in deze periode</div>
+        <div style="font-size:0.78rem;color:#8fa8c2;margin-top:2px;">Totale CO₂ in deze periode</div>
       </div>
       <div style="flex:1;min-width:200px;">
-        ${trips.length > 0 ? `<canvas id="chart-co2" height="80"></canvas>` : '<p style="color:#a0aec0;font-size:0.82rem;">Geen data</p>'}
+        ${trips.length > 0 ? `<canvas id="chart-co2" height="80"></canvas>` : '<p style="color:#8fa8c2;font-size:0.82rem;">Geen data</p>'}
       </div>
     </div>
   </div>`;
@@ -1803,31 +1959,31 @@ function renderStatistieken() {
     // Per bestuurder
     const perDriver = state.drivers.map(d => {
       const dKm = ct.filter(t=>t.driverId===d.id).reduce((a,t)=>a+t.diff,0);
-      return dKm > 0 ? `<span style="font-size:0.75rem;background:#f7fafc;padding:2px 8px;border-radius:999px;border:1px solid #e2e8f0;">${d.emoji} ${d.name}: ${fmt(dKm)} km</span>` : '';
+      return dKm > 0 ? `<span style="font-size:0.75rem;background:#eef5fc;padding:2px 8px;border-radius:999px;border:1px solid #dbe7f3;">${d.emoji} ${d.name}: ${fmt(dKm)} km</span>` : '';
     }).filter(Boolean).join(' ');
 
     // Per auto
     const perAuto = state.cars.map(c => {
       const cKm = ct.filter(t=>t.carId===c.id).reduce((a,t)=>a+t.diff,0);
-      return cKm > 0 ? `<span style="font-size:0.75rem;background:#f7fafc;padding:2px 8px;border-radius:999px;border:1px solid #e2e8f0;">${c.icon} ${c.name}: ${fmt(cKm)} km</span>` : '';
+      return cKm > 0 ? `<span style="font-size:0.75rem;background:#eef5fc;padding:2px 8px;border-radius:999px;border:1px solid #dbe7f3;">${c.icon} ${c.name}: ${fmt(cKm)} km</span>` : '';
     }).filter(Boolean).join(' ');
 
-    return `<div style="background:#f7fafc;border-radius:10px;padding:14px 16px;margin-bottom:12px;border-left:4px solid ${cat.color || '#e2e8f0'};">
+    return `<div style="background:#eef5fc;border-radius:10px;padding:14px 16px;margin-bottom:12px;border-left:4px solid ${cat.color || '#dbe7f3'};">
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
         <span style="font-size:1.1rem;background:${cat.color};color:${cat.textColor};padding:3px 12px;border-radius:999px;font-weight:700;">${cat.icon} ${cat.label}</span>
-        <span style="font-size:0.82rem;font-weight:700;color:#2d3748;">${fmt(km)} km</span>
-        <span style="font-size:0.82rem;color:#718096;">${ct.length} rit${ct.length!==1?'ten':''}</span>
+        <span style="font-size:0.82rem;font-weight:700;color:#0c1e3d;">${fmt(km)} km</span>
+        <span style="font-size:0.82rem;color:#8fa8c2;">${ct.length} rit${ct.length!==1?'ten':''}</span>
         <span style="font-size:0.82rem;color:#744210;background:#fefcbf;padding:1px 8px;border-radius:999px;">${fmtEur(verg)}</span>
         <span style="font-size:0.82rem;color:#276749;">🌿 ${co2} kg CO₂</span>
-        <span style="font-size:0.78rem;color:#718096;margin-left:auto;">${pct}% van totaal</span>
+        <span style="font-size:0.78rem;color:#8fa8c2;margin-left:auto;">${pct}% van totaal</span>
       </div>
       <div style="margin-bottom:6px;">
-        <div style="font-size:0.7rem;color:#a0aec0;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Per bestuurder</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">${perDriver || '<span style="color:#a0aec0;font-size:0.78rem;">—</span>'}</div>
+        <div style="font-size:0.7rem;color:#8fa8c2;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Per bestuurder</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${perDriver || '<span style="color:#8fa8c2;font-size:0.78rem;">—</span>'}</div>
       </div>
       <div>
-        <div style="font-size:0.7rem;color:#a0aec0;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Per auto</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;">${perAuto || '<span style="color:#a0aec0;font-size:0.78rem;">—</span>'}</div>
+        <div style="font-size:0.7rem;color:#8fa8c2;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Per auto</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${perAuto || '<span style="color:#8fa8c2;font-size:0.78rem;">—</span>'}</div>
       </div>
     </div>`;
   }).filter(Boolean).join('');
@@ -1849,7 +2005,7 @@ function renderStatistieken() {
     const ctxM = document.getElementById('chart-maand');
     if (ctxM) new Chart(ctxM, {
       type: 'bar',
-      data: { labels: maandenKort, datasets: [{ label: 'km', data: kmPerMaand, backgroundColor: '#2b6cb0cc', borderRadius: 6 }] },
+      data: { labels: maandenKort, datasets: [{ label: 'km', data: kmPerMaand, backgroundColor: '#0ea5e9cc', borderRadius: 6 }] },
       options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
     });
 
@@ -1923,10 +2079,9 @@ function renderEdit() {
         <input type="text" id="fe-dest" value="${trip.dest}">
       </div>
       <div class="form-group">
-        <label>Doel</label>
+        <label>Doel / Categorie</label>
         <select id="fe-goal">
-          <option value="prive" ${trip.goal==='prive'?'selected':''}>🏠 Privé</option>
-          <option value="werk"  ${trip.goal==='werk' ?'selected':''}>💼 Werk</option>
+          ${state.categories.map(c=>`<option value="${c.id}" ${c.id===trip.goal?'selected':''}>${c.icon} ${c.label}</option>`).join('')}
         </select>
       </div>
     </div>
@@ -1951,8 +2106,28 @@ function render() {
     case 'statistieken':  app.innerHTML = renderStatistieken(); break;
     case 'instellingen':  app.innerHTML = renderSettings();     break;
   }
+  renderSidebarExtras();
 }
 window.render = render;
+
+// ─── SIDEBAR: auto-lijst + open-ritten badge ──────────────────────────────────
+function renderSidebarExtras() {
+  const carsBox = document.getElementById('sidebar-cars');
+  if (carsBox) {
+    carsBox.innerHTML = state.cars.map(c => `
+      <div class="sidebar-car" onclick="showTab('toevoegen')">
+        <div class="sidebar-car-dot" style="background:${carColor(c.id)};"></div>
+        ${c.icon} ${c.name}
+        <span class="sidebar-car-km">${fmt(c.currentKm)}</span>
+      </div>`).join('');
+  }
+  const badge = document.getElementById('sidebar-open-badge');
+  if (badge) {
+    const openCount = state.trips.filter(t => !t.checked).length;
+    if (openCount > 0) { badge.textContent = openCount; badge.style.display = 'inline-block'; }
+    else { badge.style.display = 'none'; }
+  }
+}
 
 // ─── BOOT ────────────────────────────────────────────────────────────────────
 // ── BETALINGSPOPUP ──
@@ -1984,6 +2159,21 @@ function getWeekInfo(date) {
   };
 }
 
+// Filtert gecheckte, meetellende ritten op een week (ma t/m zo).
+function ritenVoorWeek(weekInfo) {
+  return state.trips.filter(t =>
+    t.checked && t.teltMee !== false &&
+    t.date >= weekInfo.maandagStr && t.date <= weekInfo.zondagStr
+  );
+}
+
+function bouwPerBestuurder(ritten) {
+  return state.drivers.map(d => {
+    const r = ritten.filter(t => t.driverId === d.id);
+    return { driver: d, ritten: r.length, totaal: r.reduce((a,t)=>a+t.vergoeding,0), km: r.reduce((a,t)=>a+t.diff,0) };
+  }).filter(r => r.totaal > 0);
+}
+
 function bouwBetalingInhoud(perBestuurder, totaalAlles) {
   return perBestuurder.map(r => `
     <div class="betaling-driver-row">
@@ -1993,33 +2183,29 @@ function bouwBetalingInhoud(perBestuurder, totaalAlles) {
       </div>
       <div class="bedrag">${fmtEur(r.totaal)}</div>
     </div>`).join('') + `
-    <div style="border-top:2px solid #e2e8f0;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+    <div style="border-top:2px solid #dbe7f3;margin-top:10px;padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
       <strong>Totaal te betalen</strong>
-      <strong style="font-size:1.2rem;color:#1a365d;">${fmtEur(totaalAlles)}</strong>
+      <strong style="font-size:1.2rem;color:#0c1e3d;">${fmtEur(totaalAlles)}</strong>
     </div>`;
 }
 
+// Onthoudt welke week op dit moment in de popup staat, zodat opslaan dezelfde week gebruikt.
+let huidigeBetalingWeek = null;
+
 function slaHuidigOverzichtOp() {
-  const gecheckt = state.trips.filter(t => t.checked && t.teltMee !== false);
-  if (gecheckt.length === 0) { alert('Geen gecheckte ritten met vergoeding om op te slaan.'); return; }
+  if (!huidigeBetalingWeek) huidigeBetalingWeek = getWeekInfo(new Date());
+  const weekInfo = huidigeBetalingWeek;
+  const ritten = ritenVoorWeek(weekInfo);
+  if (ritten.length === 0) { alert('Geen gecheckte ritten met vergoeding in deze week om op te slaan.'); return; }
 
-  const perBestuurder = state.drivers.map(d => {
-    const ritten = gecheckt.filter(t => t.driverId === d.id);
-    const totaal = ritten.reduce((a,t)=>a+t.vergoeding, 0);
-    return { driver: d, ritten: ritten.length, totaal, km: ritten.reduce((a,t)=>a+t.diff,0) };
-  }).filter(r => r.totaal > 0);
-
+  const perBestuurder = bouwPerBestuurder(ritten);
   if (perBestuurder.length === 0) { alert('Geen vergoedingen om op te slaan.'); return; }
 
-  const nu = new Date();
-  const weekInfo = getWeekInfo(nu);
   const totaalAlles = perBestuurder.reduce((a,r)=>a+r.totaal,0);
-  const vandaag = nu.toISOString().split('T')[0];
-
-  const historie = JSON.parse(localStorage.getItem('betaling_historie') || '[]');
+  const vandaag = new Date().toISOString().split('T')[0];
 
   // Vervang bestaand overzicht van dezelfde week+jaar, anders voeg toe
-  const bestaandIdx = historie.findIndex(h => h.weekNr === weekInfo.weekNr && h.jaar === weekInfo.jaar);
+  const bestaandIdx = state.betalingHistorie.findIndex(h => h.weekNr === weekInfo.weekNr && h.jaar === weekInfo.jaar);
   const nieuw = {
     weekNr: weekInfo.weekNr,
     jaar: weekInfo.jaar,
@@ -2036,12 +2222,13 @@ function slaHuidigOverzichtOp() {
 
   if (bestaandIdx >= 0) {
     if (!confirm(`Er bestaat al een overzicht voor ${weekInfo.label}. Overschrijven?`)) return;
-    historie[bestaandIdx] = nieuw;
+    state.betalingHistorie[bestaandIdx] = nieuw;
   } else {
-    historie.unshift(nieuw);
+    state.betalingHistorie.unshift(nieuw);
   }
 
-  localStorage.setItem('betaling_historie', JSON.stringify(historie.slice(0, 104)));
+  state.betalingHistorie = state.betalingHistorie.slice(0, 104);
+  pushToFirebase();
   alert(`✅ Overzicht opgeslagen voor ${weekInfo.label}`);
 }
 window.slaHuidigOverzichtOp = slaHuidigOverzichtOp;
@@ -2054,20 +2241,16 @@ function checkZondagBetaling() {
   const sleutel = 'betaling_getoond_' + nu.toISOString().split('T')[0];
   if (localStorage.getItem(sleutel)) return;
 
-  const gecheckt = state.trips.filter(t => t.checked && t.teltMee !== false);
-  if (gecheckt.length === 0) return;
+  const weekInfo = getWeekInfo(nu);
+  const ritten = ritenVoorWeek(weekInfo);
+  if (ritten.length === 0) return;
 
-  const perBestuurder = state.drivers.map(d => {
-    const ritten = gecheckt.filter(t => t.driverId === d.id);
-    const totaal = ritten.reduce((a,t)=>a+t.vergoeding, 0);
-    return { driver: d, ritten: ritten.length, totaal, km: ritten.reduce((a,t)=>a+t.diff,0) };
-  }).filter(r => r.totaal > 0);
-
+  const perBestuurder = bouwPerBestuurder(ritten);
   if (perBestuurder.length === 0) return;
 
-  const weekInfo = getWeekInfo(nu);
+  huidigeBetalingWeek = weekInfo;
   document.getElementById('betaling-subtitle').innerHTML =
-    `<strong>${weekInfo.label}</strong><br><span style="font-size:0.75rem;color:#a0aec0;">Automatisch overzicht van deze zondag</span>`;
+    `<strong>${weekInfo.label}</strong><br><span style="font-size:0.75rem;color:#8fa8c2;">Automatisch overzicht van deze zondag · alleen ritten van deze week</span>`;
 
   const totaalAlles = perBestuurder.reduce((a,r)=>a+r.totaal,0);
   document.getElementById('betaling-content').innerHTML = bouwBetalingInhoud(perBestuurder, totaalAlles);
@@ -2078,41 +2261,22 @@ function checkZondagBetaling() {
 }
 window.checkZondagBetaling = checkZondagBetaling;
 
-function slaBetalingOp(weekInfo, perBestuurder, totaalAlles) {
-  const historie = JSON.parse(localStorage.getItem('betaling_historie') || '[]');
-  // Geen duplicaten
-  if (historie.some(h => h.weekNr === weekInfo.weekNr && h.jaar === weekInfo.jaar)) return;
-  historie.unshift({
-    weekNr: weekInfo.weekNr,
-    jaar: weekInfo.jaar,
-    label: weekInfo.label,
-    datum: new Date().toISOString().split('T')[0],
-    perBestuurder: perBestuurder.map(r => ({ naam: r.driver.emoji+' '+r.driver.name, ritten: r.ritten, km: r.km, totaal: r.totaal })),
-    totaalAlles,
-  });
-  localStorage.setItem('betaling_historie', JSON.stringify(historie.slice(0, 52))); // max 1 jaar
-}
-
 function sluitBetalingPopup() {
   document.getElementById('betaling-overlay').style.display = 'none';
 }
 window.sluitBetalingPopup = sluitBetalingPopup;
 
 function toonBetalingOverzicht() {
-  const gecheckt = state.trips.filter(t => t.checked && t.teltMee !== false);
-  if (gecheckt.length === 0) { alert('Geen gecheckte ritten met vergoeding gevonden.'); return; }
-
-  const perBestuurder = state.drivers.map(d => {
-    const ritten = gecheckt.filter(t => t.driverId === d.id);
-    const totaal = ritten.reduce((a,t)=>a+t.vergoeding, 0);
-    return { driver: d, ritten: ritten.length, totaal, km: ritten.reduce((a,t)=>a+t.diff,0) };
-  }).filter(r => r.totaal > 0);
-
-  if (perBestuurder.length === 0) { alert('Geen openstaande vergoedingen gevonden.'); return; }
-
   const weekInfo = getWeekInfo(new Date());
+  huidigeBetalingWeek = weekInfo;
+  const ritten = ritenVoorWeek(weekInfo);
+  if (ritten.length === 0) { alert('Geen gecheckte ritten met vergoeding in deze week (ma t/m zo) gevonden.'); return; }
+
+  const perBestuurder = bouwPerBestuurder(ritten);
+  if (perBestuurder.length === 0) { alert('Geen openstaande vergoedingen in deze week gevonden.'); return; }
+
   document.getElementById('betaling-subtitle').innerHTML =
-    `<strong>${weekInfo.label}</strong><br><span style="font-size:0.75rem;color:#a0aec0;">Handmatig geopend — alle gecheckte ritten</span>`;
+    `<strong>${weekInfo.label}</strong><br><span style="font-size:0.75rem;color:#8fa8c2;">Handmatig geopend · alleen gecheckte ritten van deze week</span>`;
 
   const totaalAlles = perBestuurder.reduce((a,r)=>a+r.totaal,0);
   document.getElementById('betaling-content').innerHTML = bouwBetalingInhoud(perBestuurder, totaalAlles);
@@ -2122,7 +2286,7 @@ window.toonBetalingOverzicht = toonBetalingOverzicht;
 
 function toonBetalingHistorie() {
   document.getElementById('betaling-overlay').style.display = 'none';
-  const historie = JSON.parse(localStorage.getItem('betaling_historie') || '[]');
+  const historie = [...state.betalingHistorie];
   // Sorteer op jaar+week descending
   historie.sort((a,b) => b.jaar !== a.jaar ? b.jaar - a.jaar : b.weekNr - a.weekNr);
   const box = document.getElementById('historie-content');
@@ -2131,24 +2295,24 @@ function toonBetalingHistorie() {
     box.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="es-icon">📋</div>Nog geen overzichten opgeslagen.<br><span style="font-size:0.78rem;">Open een betalingsoverzicht en klik op "📸 Overzicht opslaan".</span></div>`;
   } else {
     box.innerHTML = historie.map((h, idx) => `
-      <div style="border:1.5px solid #e2e8f0;border-radius:10px;margin-bottom:8px;overflow:hidden;">
-        <div onclick="toggleHistorieDetail(${idx})" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:white;transition:background 0.15s;" onmouseover="this.style.background='#f7fafc'" onmouseout="this.style.background='white'">
+      <div style="border:1.5px solid #dbe7f3;border-radius:10px;margin-bottom:8px;overflow:hidden;">
+        <div onclick="toggleHistorieDetail(${idx})" style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;cursor:pointer;background:white;transition:background 0.15s;" onmouseover="this.style.background='#eef5fc'" onmouseout="this.style.background='white'">
           <div style="display:flex;align-items:center;gap:10px;">
             <span style="font-size:0.9rem;">📅</span>
             <div>
               <div style="font-weight:700;font-size:0.88rem;">Week ${h.weekNr} · ${h.label.replace('Week '+h.weekNr+' ','')}</div>
-              <div style="font-size:0.71rem;color:#a0aec0;">Opgeslagen op ${h.datum}</div>
+              <div style="font-size:0.71rem;color:#8fa8c2;">Opgeslagen op ${h.datum}</div>
             </div>
           </div>
           <div style="display:flex;align-items:center;gap:10px;">
-            <strong style="color:#1a365d;">${fmtEur(h.totaalAlles)}</strong>
-            <span id="historie-arrow-${idx}" style="color:#a0aec0;font-size:0.8rem;">▼</span>
+            <strong style="color:#0c1e3d;">${fmtEur(h.totaalAlles)}</strong>
+            <span id="historie-arrow-${idx}" style="color:#8fa8c2;font-size:0.8rem;">▼</span>
           </div>
         </div>
-        <div id="historie-detail-${idx}" style="display:none;padding:0 16px 12px;background:#fafafa;border-top:1px solid #e2e8f0;">
+        <div id="historie-detail-${idx}" style="display:none;padding:0 16px 12px;background:#fafafa;border-top:1px solid #dbe7f3;">
           ${h.perBestuurder.map(r => `
             <div style="display:flex;justify-content:space-between;padding:7px 0;font-size:0.82rem;border-bottom:1px solid #f0f4f8;">
-              <span>${r.naam} <span style="color:#a0aec0;">· ${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</span></span>
+              <span>${r.naam} <span style="color:#8fa8c2;">· ${r.ritten} rit${r.ritten!==1?'ten':''} · ${fmt(r.km)} km</span></span>
               <strong>${fmtEur(r.totaal)}</strong>
             </div>`).join('')}
         </div>
@@ -2174,6 +2338,24 @@ function sluitHistoriePopup() {
 }
 window.sluitHistoriePopup = sluitHistoriePopup;
 
+// Eenmalige migratie: oude historie uit localStorage naar de gesyncte state halen.
+function migreerBetalingHistorie() {
+  try {
+    const oud = JSON.parse(localStorage.getItem('betaling_historie') || '[]');
+    if (!Array.isArray(oud) || oud.length === 0) return;
+    let veranderd = false;
+    oud.forEach(o => {
+      const bestaat = state.betalingHistorie.some(h => h.weekNr === o.weekNr && h.jaar === o.jaar);
+      if (!bestaat) { state.betalingHistorie.push(o); veranderd = true; }
+    });
+    if (veranderd) {
+      state.betalingHistorie.sort((a,b)=> b.jaar !== a.jaar ? b.jaar-a.jaar : b.weekNr-a.weekNr);
+      pushToFirebase();
+    }
+    localStorage.removeItem('betaling_historie'); // eenmalig, niet opnieuw migreren
+  } catch(e) { /* stilletjes negeren */ }
+}
+
 tryAutoConnect();
 
 // ── FEATURE 16: PWA ──
@@ -2182,8 +2364,8 @@ const manifest = {
   short_name: "Autotracker",
   start_url: "./",
   display: "standalone",
-  background_color: "#f0f4f8",
-  theme_color: "#1a365d",
+  background_color: "#f5f9fd",
+  theme_color: "#0c1e3d",
   icons: [{ src: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚗</text></svg>", sizes: "any", type: "image/svg+xml" }]
 };
 const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
