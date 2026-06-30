@@ -16,10 +16,10 @@
     --bg: #f5f9fd; --surf: #ffffff; --surf2: #eef5fc; --bdr: #dbe7f3; --txt: #0c1e3d; --txt2: #2c4a6e; --txt3: #8fa8c2;
     --accent: #0ea5e9; --accent2: #0284c7; --green: #10b981; --red: #ef4444; --amber: #f59e0b;
   }
-  body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 14px; }
+  body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 14px; overflow-x: hidden; }
 
   /* ── App shell: sidebar (desktop) + bottom nav (mobile) ── */
-  .app-shell { display: flex; min-height: 100vh; }
+  .app-shell { display: flex; min-height: 100vh; overflow-x: hidden; }
 
   /* ── Sidebar (desktop) ── */
   .sidebar { width: 230px; flex-shrink: 0; background: var(--sid); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
@@ -49,7 +49,7 @@
   .topbar { display: flex; align-items: center; gap: 12px; padding: 18px 24px; background: var(--surf); border-bottom: 1px solid var(--bdr); }
   .topbar-title { font-size: 1.15rem; font-weight: 800; color: var(--txt); letter-spacing: -0.01em; }
   .topbar-actions { display: flex; gap: 8px; margin-left: auto; }
-  .content { padding: 20px 24px; max-width: 1100px; width: 100%; margin: 0 auto; flex: 1; }
+  .content { padding: 20px 24px; max-width: 1100px; width: 100%; margin: 0 auto; flex: 1; min-width: 0; overflow-x: hidden; }
 
   /* ── Mobile header (hidden on desktop) ── */
   .mobile-header { display: none; }
@@ -91,6 +91,7 @@
   .btn-block { width: 100%; margin-top: 10px; }
   .btn-sm { padding: 5px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 600; transition: all 0.15s; }
   .btn-danger-sm { background: #fff5f5; color: #c53030; border: 1px solid #fed7d7; }
+  .btn-icon-only { width: 30px; height: 30px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 0.85rem; flex-shrink: 0; }
   .btn-danger-sm:hover { background: #fed7d7; }
   .btn-edit-sm { background: #e0f2fe; color: var(--accent2); border: 1px solid #bae6fd; }
   .btn-edit-sm:hover { background: #bae6fd; }
@@ -121,6 +122,19 @@
     .t-driver { flex: 1; font-size: 0.75rem; color: var(--txt3); }
   }
 
+  /* ── Trip item: gestapelde kaart-layout op smalle schermen ── */
+  @media (max-width: 480px) {
+    .trip-item { flex-wrap: wrap; row-gap: 8px; padding: 12px; }
+    .trip-item .t-dest { flex: 1 1 100%; order: 1; white-space: normal; }
+    .trip-item .check-wrap { order: 0; }
+    .trip-item .trip-dot { order: 0; }
+    .trip-item .driver-chip { order: 0; }
+    .trip-item .t-status { order: 2; flex: 0 0 auto; }
+    .trip-item .t-driver { display: none; }
+    .trip-item .t-km { order: 3; margin-left: auto; flex: 0 0 auto; }
+    .trip-item .btn-edit-sm, .trip-item .btn-danger-sm { order: 4; }
+  }
+
   /* ── Stats ── */
   .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
   @media (max-width: 700px) { .stats-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -136,6 +150,24 @@
 
   /* ── Filters ── */
   .filter-bar { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; align-items: center; }
+
+  /* ── Alle ritten: toolbar + filters ── */
+  .trips-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .trips-search { flex: 1; min-width: 160px; padding: 9px 14px; border: 1.5px solid var(--bdr); border-radius: 8px; font-size: 0.88rem; background: var(--surf2); color: var(--txt); }
+  .trips-search:focus { outline: none; border-color: var(--accent); background: white; }
+  .trips-viewtoggle { display: flex; gap: 6px; flex-shrink: 0; }
+  .trips-filters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .filter-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+  .filter-field label { font-size: 0.62rem; font-weight: 700; color: var(--txt3); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+  .filter-field select { width: 100%; padding: 7px 10px; border-radius: 8px; border: 1.5px solid var(--bdr); font-size: 0.8rem; font-weight: 600; color: var(--txt2); background: var(--surf); cursor: pointer; }
+  @media (max-width: 700px) {
+    .trips-filters { grid-template-columns: 1fr 1fr; }
+    .filter-field:nth-child(3) { grid-column: 1 / -1; }
+  }
+  @media (max-width: 480px) {
+    .trips-viewtoggle { width: 100%; }
+    .trips-viewtoggle .filter-btn { flex: 1; }
+  }
   .filter-btn { padding: 6px 14px; border-radius: 999px; border: 1.5px solid var(--bdr); background: var(--surf); font-size: 0.82rem; font-weight: 600; cursor: pointer; color: var(--txt2); transition: all 0.15s; }
   .filter-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
 
@@ -143,6 +175,14 @@
 
   /* ── Settings ── */
   .settings-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; padding: 12px; border: 1.5px solid var(--bdr); border-radius: 8px; flex-wrap: wrap; }
+  .cat-row { display: grid; grid-template-columns: 48px 1fr 36px 190px 110px; align-items: center; gap: 10px; margin-bottom: 10px; padding: 12px; border: 1.5px solid var(--bdr); border-radius: 8px; }
+  .cat-row .cat-checkbox-label { display: flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 600; color: var(--txt2); text-transform: none; letter-spacing: 0; cursor: pointer; white-space: nowrap; }
+  .cat-row .cat-action { justify-self: end; white-space: nowrap; }
+  @media (max-width: 700px) {
+    .cat-row { grid-template-columns: 40px 1fr 32px; }
+    .cat-row .cat-checkbox-label { grid-column: 1 / -1; }
+    .cat-row .cat-action { grid-column: 1 / -1; justify-self: end; }
+  }
   .driver-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
   .driver-stats { font-size: 0.78rem; color: var(--txt2); background: var(--surf2); border-radius: 8px; padding: 8px 12px; margin-top: 6px; display: flex; gap: 16px; flex-wrap: wrap; }
   .driver-stat-item { display: flex; flex-direction: column; gap: 1px; }
@@ -205,6 +245,8 @@
   .stat-section { background:var(--surf); border-radius:12px; padding:20px; box-shadow:0 1px 3px rgba(12,30,61,0.06); margin-bottom:20px; }
   .stat-section h3 { font-size:0.9rem; font-weight:700; color:var(--txt); margin-bottom:14px; display:flex; align-items:center; gap:8px; }
   .stat-table { width:100%; border-collapse:collapse; font-size:0.85rem; }
+  .stat-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .stat-table-wrap .stat-table { min-width: 480px; }
   .stat-table th { text-align:left; padding:8px 10px; font-size:0.72rem; font-weight:700; color:var(--txt3); text-transform:uppercase; letter-spacing:0.04em; border-bottom:2px solid var(--bdr); }
   .stat-table td { padding:9px 10px; border-bottom:1px solid var(--surf2); color:var(--txt2); }
   .stat-table tr:last-child td { border-bottom:none; }
@@ -1088,9 +1130,11 @@ function setRittenView(view) {
 }
 window.setRittenView = setRittenView;
 
+let searchDebounceTimer = null;
 function setSearch(val) {
   state.searchQuery = val;
-  render();
+  clearTimeout(searchDebounceTimer);
+  searchDebounceTimer = setTimeout(() => render(), 250);
 }
 window.setSearch = setSearch;
 
@@ -1454,8 +1498,8 @@ function renderTrips() {
   const totalKm   = f.reduce((a,t)=>a+t.diff,0);
   const totalVerg = f.reduce((a,t)=>a+t.vergoeding,0);
 
-  const carBtns = state.cars.map(c=>
-    `<button class="filter-btn ${state.filterCarId==c.id?'active':''}" onclick="setFilter('car',${c.id})">${c.icon} ${c.name}</button>`
+  const carOpts = state.cars.map(c=>
+    `<option value="${c.id}" ${state.filterCarId==c.id?'selected':''}>${c.icon} ${c.name}</option>`
   ).join('');
 
   const driverOpts = state.drivers.map(d=>
@@ -1470,25 +1514,33 @@ function renderTrips() {
        </div>` : '';
 
   return `
-  <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
-    <input type="text" placeholder="🔍 Zoek op bestemming, bestuurder, auto..." value="${state.searchQuery}"
-      oninput="setSearch(this.value)"
-      style="flex:1;padding:9px 14px;border:1.5px solid #dbe7f3;border-radius:8px;font-size:0.88rem;">
-    <button class="filter-btn ${state.ritten_view==='lijst'?'active':''}" onclick="setRittenView('lijst')">☰ Lijst</button>
-    <button class="filter-btn ${state.ritten_view==='kalender'?'active':''}" onclick="setRittenView('kalender')">📅 Kalender</button>
+  <div class="trips-toolbar">
+    <input type="text" id="ritten-search" class="trips-search" placeholder="🔍 Zoek op bestemming, bestuurder, auto..." value="${state.searchQuery}"
+      oninput="setSearch(this.value)">
+    <div class="trips-viewtoggle">
+      <button class="filter-btn ${state.ritten_view==='lijst'?'active':''}" onclick="setRittenView('lijst')">☰ Lijst</button>
+      <button class="filter-btn ${state.ritten_view==='kalender'?'active':''}" onclick="setRittenView('kalender')">📅 Kalender</button>
+    </div>
   </div>
-  <div class="filter-bar">
-    <button class="filter-btn ${state.filterCarId==='all'?'active':''}" onclick="setFilter('car','all')">Alle auto's</button>
-    ${carBtns}
-  </div>
-  <div class="filter-bar">
-    <button class="filter-btn ${state.filterChecked==='all'?'active':''}"     onclick="setFilter('checked','all')">Alle statussen</button>
-    <button class="filter-btn ${state.filterChecked==='open'?'active':''}"    onclick="setFilter('checked','open')">○ Open</button>
-    <button class="filter-btn ${state.filterChecked==='checked'?'active':''}" onclick="setFilter('checked','checked')">✔ Gecontroleerd</button>
-    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
-      <label style="font-size:0.78rem;font-weight:600;color:#2c4a6e;text-transform:uppercase;letter-spacing:0.04em;white-space:nowrap;">👤 Bestuurder</label>
-      <select onchange="setFilter('driver',this.value)"
-        style="padding:6px 10px;border-radius:8px;border:1.5px solid #dbe7f3;font-size:0.82rem;font-weight:600;color:#2c4a6e;background:white;cursor:pointer;min-width:140px;">
+  <div class="trips-filters">
+    <div class="filter-field">
+      <label>🚗 Auto</label>
+      <select onchange="setFilter('car',this.value)">
+        <option value="all" ${state.filterCarId==='all'?'selected':''}>Alle auto's</option>
+        ${carOpts}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>📊 Status</label>
+      <select onchange="setFilter('checked',this.value)">
+        <option value="all"     ${state.filterChecked==='all'?'selected':''}>Alle statussen</option>
+        <option value="open"    ${state.filterChecked==='open'?'selected':''}>○ Open</option>
+        <option value="checked" ${state.filterChecked==='checked'?'selected':''}>✔ Gecontroleerd</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>👤 Bestuurder</label>
+      <select onchange="setFilter('driver',this.value)">
         <option value="all" ${state.filterDriverId==='all'?'selected':''}>Alle bestuurders</option>
         ${driverOpts}
       </select>
@@ -1562,7 +1614,7 @@ function renderSettings() {
         <input type="text" value="${d.name}" onchange="updateDriver(${d.id},'name',this.value)" style="flex:1;min-width:100px;font-weight:600;" placeholder="Naam">
         <input type="color" value="${d.color.startsWith('#')?d.color:'#bee3f8'}" onchange="updateDriver(${d.id},'color',this.value);render()"
           title="Kleur" style="width:36px;height:36px;padding:2px;border:1.5px solid #dbe7f3;border-radius:6px;cursor:pointer;">
-        <button class="btn-sm btn-danger-sm" onclick="removeDriver(${d.id})">🗑 Verwijder</button>
+        <button class="btn-sm btn-danger-sm btn-icon-only" onclick="removeDriver(${d.id})" title="Bestuurder verwijderen">🗑</button>
       </div>
       <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">${emojis}</div>
       <div class="driver-stats">
@@ -1588,19 +1640,23 @@ function renderSettings() {
       `<span style="cursor:pointer;font-size:1.1rem;padding:2px;border-radius:4px;${c.icon===em?'outline:2px solid #0ea5e9;':''}"
         onclick="updateCar(${c.id},'icon','${em}');render()">${em}</span>`
     ).join('');
-    return `<div class="settings-row" style="border-left:4px solid ${color};">
-      <div style="font-size:1.5rem;flex-shrink:0;">${c.icon}</div>
-      <input type="text" value="${c.name}" onchange="updateCar(${c.id},'name',this.value)" style="flex:1;min-width:80px;font-weight:700;" placeholder="Auto naam">
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        <label style="font-size:0.78rem;color:#8fa8c2;text-transform:none;letter-spacing:0;white-space:nowrap;">Begin km:</label>
-        <input type="number" value="${c.currentKm}" onchange="updateCar(${c.id},'currentKm',this.value)" style="width:90px;text-align:right;">
+    return `<div class="settings-row car-settings-row" style="border-left:4px solid ${color};flex-direction:column;align-items:stretch;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="font-size:1.5rem;flex-shrink:0;">${c.icon}</div>
+        <input type="text" value="${c.name}" onchange="updateCar(${c.id},'name',this.value)" style="flex:1;min-width:80px;font-weight:700;" placeholder="Auto naam">
+        <button class="btn-sm btn-danger-sm btn-icon-only" onclick="removeCar(${c.id})" title="Auto verwijderen">🗑</button>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
-        <label style="font-size:0.78rem;color:#8fa8c2;text-transform:none;letter-spacing:0;white-space:nowrap;">🌿 g CO₂/km:</label>
-        <input type="number" value="${c.co2PerKm||120}" onchange="updateCar(${c.id},'co2PerKm',parseInt(this.value)||120)" style="width:70px;text-align:right;" min="0" max="500">
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-top:10px;">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:0.78rem;color:#8fa8c2;text-transform:none;letter-spacing:0;white-space:nowrap;">Begin km:</label>
+          <input type="number" value="${c.currentKm}" onchange="updateCar(${c.id},'currentKm',this.value)" style="width:90px;text-align:right;">
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <label style="font-size:0.78rem;color:#8fa8c2;text-transform:none;letter-spacing:0;white-space:nowrap;">🌿 g CO₂/km:</label>
+          <input type="number" value="${c.co2PerKm||120}" onchange="updateCar(${c.id},'co2PerKm',parseInt(this.value)||120)" style="width:70px;text-align:right;" min="0" max="500">
+        </div>
       </div>
-      <div style="display:flex;gap:4px;flex-wrap:wrap;">${icons}</div>
-      <button class="btn-sm btn-danger-sm" onclick="removeCar(${c.id})">🗑 Verwijder</button>
+      <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:10px;">${icons}</div>
     </div>`;
   }).join('');
 
@@ -1614,19 +1670,21 @@ function renderSettings() {
 
   // ── Categorieën ──
   const catRows = state.categories.map(cat => `
-    <div class="settings-row" style="gap:8px;flex-wrap:wrap;">
+    <div class="cat-row">
       <input type="text" value="${cat.icon}" onchange="updateCat('${cat.id}','icon',this.value)"
         style="width:48px;text-align:center;font-size:1.2rem;padding:6px;">
       <input type="text" value="${cat.label}" onchange="updateCat('${cat.id}','label',this.value)"
-        style="flex:1;min-width:80px;font-weight:600;">
+        style="font-weight:600;">
       <input type="color" value="${cat.color}" onchange="updateCat('${cat.id}','color',this.value)"
         title="Achtergrondkleur" style="width:36px;height:36px;padding:2px;border:1.5px solid #dbe7f3;border-radius:6px;cursor:pointer;">
-      <label style="display:flex;align-items:center;gap:6px;font-size:0.82rem;font-weight:600;color:#2c4a6e;text-transform:none;letter-spacing:0;cursor:pointer;white-space:nowrap;">
+      <label class="cat-checkbox-label">
         <input type="checkbox" ${cat.vergoeding !== false ? 'checked' : ''} onchange="updateCat('${cat.id}','vergoeding',this.checked);pushToFirebase()"
-          style="width:16px;height:16px;accent-color:#0ea5e9;">
+          style="width:16px;height:16px;accent-color:#0ea5e9;flex-shrink:0;">
         Meetellen in vergoeding
       </label>
-      ${cat.id !== 'prive' && cat.id !== 'werk' ? `<button class="btn-sm btn-danger-sm" onclick="removeCat('${cat.id}')">🗑 Verwijder</button>` : '<span style="font-size:0.72rem;color:#8fa8c2;">Standaard</span>'}
+      <div class="cat-action">
+        ${cat.id !== 'prive' && cat.id !== 'werk' ? `<button class="btn-sm btn-danger-sm btn-icon-only" onclick="removeCat('${cat.id}')" title="Categorie verwijderen">🗑</button>` : '<span style="font-size:0.72rem;color:#8fa8c2;">Standaard</span>'}
+      </div>
     </div>`).join('');
 
   const catsSection = `
@@ -1844,6 +1902,7 @@ function renderStatistieken() {
   const carTable = `
   <div class="stat-section">
     <h3>🚗 Per auto</h3>
+    <div class="stat-table-wrap">
     <table class="stat-table">
       <tr><th>Auto</th><th>Ritten</th><th>Km gereden</th><th>Vergoeding</th><th style="min-width:120px;">Aandeel</th></tr>
       ${carRows.map((r,i)=>`<tr>
@@ -1854,6 +1913,7 @@ function renderStatistieken() {
         <td><div class="bar-wrap"><div class="bar" style="width:${r.pct}px;background:${r.color};max-width:100px;"></div><span style="font-size:0.78rem;color:#8fa8c2;">${r.pct}%</span></div></td>
       </tr>`).join('')}
     </table>
+    </div>
   </div>`;
 
   // ── Per bestuurder ──
@@ -1870,6 +1930,7 @@ function renderStatistieken() {
   const driverTable = `
   <div class="stat-section">
     <h3>👤 Per bestuurder</h3>
+    <div class="stat-table-wrap">
     <table class="stat-table">
       <tr><th>Bestuurder</th><th>Ritten</th><th>Totaal km</th><th>Privé km</th><th>Werk km</th><th>Vergoeding</th></tr>
       ${driverRows.map((r,i)=>`<tr>
@@ -1881,6 +1942,7 @@ function renderStatistieken() {
         <td class="num">${fmtEur(r.verg)}</td>
       </tr>`).join('')}
     </table>
+    </div>
   </div>`;
 
   // ── Per bestuurder per auto ──
@@ -1895,6 +1957,7 @@ function renderStatistieken() {
   const driverCarTable = driverCarRows.length === 0 ? '' : `
   <div class="stat-section">
     <h3>👤🚗 Bestuurder per auto</h3>
+    <div class="stat-table-wrap">
     <table class="stat-table">
       <tr><th>Bestuurder</th>${state.cars.map(c=>`<th class="num">${c.icon} ${c.name}</th>`).join('')}</tr>
       ${state.drivers.map(d => {
@@ -1906,6 +1969,7 @@ function renderStatistieken() {
         return total > 0 ? `<tr><td>${d.emoji} ${d.name}</td>${cols}</tr>` : '';
       }).join('')}
     </table>
+    </div>
   </div>`;
 
   // ── Grappige statistieken ──
@@ -2186,6 +2250,12 @@ function renderEdit() {
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 function render() {
   const app = document.getElementById('app');
+  // Onthoud welk invoerveld actief was + cursorpositie, zodat focus niet verloren gaat bij herrenderen.
+  const actief = document.activeElement;
+  const wasFocusedId = (actief && app.contains(actief) && actief.id) ? actief.id : null;
+  const selStart = wasFocusedId && 'selectionStart' in actief ? actief.selectionStart : null;
+  const selEnd   = wasFocusedId && 'selectionEnd'   in actief ? actief.selectionEnd   : null;
+
   switch (state.activeTab) {
     case 'overzicht':     app.innerHTML = renderOverview();     break;
     case 'toevoegen':     app.innerHTML = renderAdd();          break;
@@ -2195,6 +2265,16 @@ function render() {
     case 'instellingen':  app.innerHTML = renderSettings();     break;
   }
   renderSidebarExtras();
+
+  if (wasFocusedId) {
+    const opnieuw = document.getElementById(wasFocusedId);
+    if (opnieuw) {
+      opnieuw.focus();
+      if (selStart !== null && typeof opnieuw.setSelectionRange === 'function') {
+        try { opnieuw.setSelectionRange(selStart, selEnd); } catch(e) { /* sommige input-types ondersteunen dit niet */ }
+      }
+    }
+  }
 }
 window.render = render;
 
