@@ -71,14 +71,15 @@
   /* ── Forms ── */
   .form-card { background: var(--surf); border-radius: 12px; padding: 20px; box-shadow: 0 1px 3px rgba(12,30,61,0.06); margin-bottom: 18px; }
   .form-card h2 { font-size: 1rem; font-weight: 700; margin-bottom: 16px; color: var(--txt); }
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-  .form-group { display: flex; flex-direction: column; gap: 4px; }
+  .form-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 12px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .form-group.full { grid-column: 1 / -1; }
   label { font-size: 0.74rem; font-weight: 600; color: var(--txt2); text-transform: uppercase; letter-spacing: 0.04em; }
   input[type=text], input[type=number], input[type=date], input[type=password], select, textarea {
-    padding: 9px 12px; border: 1.5px solid var(--bdr); border-radius: 8px; font-size: 0.9rem; width: 100%;
-    transition: border-color 0.2s; background: var(--surf2); color: var(--txt); font-family: inherit;
+    padding: 9px 12px; border: 1.5px solid var(--bdr); border-radius: 8px; font-size: 0.9rem; width: 100%; max-width: 100%;
+    transition: border-color 0.2s; background: var(--surf2); color: var(--txt); font-family: inherit; box-sizing: border-box;
   }
+  input[type=date] { min-width: 0; -webkit-appearance: none; appearance: none; }
   textarea { resize: vertical; min-height: 80px; font-size: 0.8rem; }
   input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); background: white; }
 
@@ -280,7 +281,7 @@
     .bottom-nav-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent2); margin: 0 auto -2px; }
 
     .content { padding: 14px; }
-    .form-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: minmax(0,1fr); }
     .form-group.full { grid-column: 1; }
     .period-selector { gap: 6px; }
     .period-selector .print-btn { width: 100%; justify-content: center; margin-left: 0; }
@@ -295,9 +296,10 @@
   }
 
   /* ── Redesign: Check button ── */
-  .check-btn { width: 32px; height: 32px; border-radius: 8px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; color: white; font-weight: 800; transition: all 0.15s ease; flex-shrink: 0; }
-  .check-btn.open { background: #10b981; }
-  .check-btn.checked { background: #d1d5db; }
+  .check-btn { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 15px; font-weight: 800; transition: all 0.15s ease; flex-shrink: 0; }
+  .check-btn.open { background: var(--surf2); border: 1.5px solid var(--bdr); color: transparent; }
+  .check-btn.open:hover { border-color: #10b981; }
+  .check-btn.checked { background: #10b981; border: 1.5px solid #10b981; color: white; }
 
   /* ── Redesign: Mobile trip card ── */
   @media (max-width: 860px) {
@@ -1259,7 +1261,22 @@ function renderOverview() {
   const privKm     = state.trips.filter(t=>t.goal==='prive').reduce((a,t)=>a+t.diff,0);
   const werkKm     = state.trips.filter(t=>t.goal==='werk').reduce((a,t)=>a+t.diff,0);
   const openCount  = state.trips.filter(t=>!t.checked).length;
-  const co2Total   = state.trips.reduce((a,t)=>a+co2ForTrip(t),0);
+
+  // CO2 van de huidige maand + vergelijking met de vorige maand
+  const now = new Date();
+  const curY = now.getFullYear(), curM = now.getMonth() + 1;
+  let prevY = curY, prevM = curM - 1;
+  if (prevM === 0) { prevM = 12; prevY = curY - 1; }
+  const inMonth = (t, y, m) => {
+    const [ty, tm] = t.date.split('-').map(Number);
+    return ty === y && tm === m;
+  };
+  const co2ThisMonth = state.trips.filter(t=>inMonth(t,curY,curM)).reduce((a,t)=>a+co2ForTrip(t),0);
+  const co2PrevMonth  = state.trips.filter(t=>inMonth(t,prevY,prevM)).reduce((a,t)=>a+co2ForTrip(t),0);
+  let co2Diff = null;
+  if (co2PrevMonth > 0) {
+    co2Diff = ((co2ThisMonth - co2PrevMonth) / co2PrevMonth) * 100;
+  }
 
   const carCards = state.cars.map(c => {
     const ct = state.trips.filter(t=>t.carId===c.id);
@@ -1289,12 +1306,21 @@ function renderOverview() {
        <div class="trip-list">${state.trips.slice(0,5).map(renderTripItem).join('')}</div>`
     : `<div class="empty-state"><div class="es-icon">🛣️</div>Nog geen ritten geregistreerd.<br>Voeg je eerste rit toe!</div>`;
 
+  const maandNamen = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  const co2DiffBadge = co2Diff === null ? '' : (() => {
+    const isLess = co2Diff <= 0;
+    const arrow  = isLess ? '↓' : '↑';
+    const bg     = isLess ? '#dcfce7' : '#fee2e2';
+    const fg     = isLess ? '#15803d' : '#dc2626';
+    return `<span style="margin-left:10px;font-size:0.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:${bg};color:${fg};white-space:nowrap;">${arrow} ${Math.abs(co2Diff).toFixed(0)}% t.o.v. ${maandNamen[prevM-1]}</span>`;
+  })();
+
   const co2Card = totalKm > 0 ? `
   <div class="form-card" style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
     <div style="font-size:2rem;">🌿</div>
     <div>
-      <div class="section-title" style="margin-bottom:3px;">CO₂ uitstoot totaal</div>
-      <div style="font-size:1.4rem;font-weight:800;color:var(--accent);">${co2Total.toFixed(0)} kg CO₂</div>
+      <div class="section-title" style="margin-bottom:3px;">CO₂ uitstoot · ${maandNamen[curM-1]}</div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--accent);display:flex;align-items:center;flex-wrap:wrap;">${co2ThisMonth.toFixed(0)} kg CO₂${co2DiffBadge}</div>
     </div>
   </div>` : '';
 
