@@ -344,7 +344,12 @@
   .trip-subline span { font-size: 0.72rem; color: var(--txt3); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @media (max-width: 860px) {
     .trip-subline { display: none; }
-    .overview-cards-row { grid-template-columns: 1fr !important; }
+    .overview-cards-row { gap: 8px !important; }
+    .overview-cards-row .form-card { flex-direction: column !important; align-items: flex-start !important; gap: 6px !important; padding: 12px !important; }
+    .overview-cards-row .oc-icon { font-size: 1.3rem !important; }
+    .overview-cards-row .section-title { font-size: 0.62rem !important; }
+    .overview-cards-row .oc-value { font-size: 1rem !important; }
+    .overview-cards-row .oc-badge span { font-size: 0.66rem !important; padding: 2px 7px !important; }
   }
 
 </style>
@@ -581,6 +586,17 @@ const state = {
   ritten_density: 'comfortable', // 'comfortable' | 'compact'
   declaraties: [],
   nextDeclaratieId: 1,
+  declBuilder: {
+    categories: [],           // lege array = alle categorieën
+    driverId: 'all',
+    periodType: 'maand',      // 'week' | 'maand' | 'jaar' | 'specifieke_maand' | 'specifiek_jaar' | 'aangepast'
+    maand: new Date().getMonth() + 1,
+    jaar: new Date().getFullYear(),
+    van: '',
+    tot: '',
+    notitie: '',
+    status: 'concept',        // 'concept' | 'ingediend' | 'uitbetaald'
+  },
 };
 
 // Default data for first run
@@ -621,6 +637,23 @@ function tripInPeriod(t, period) {
   if (period === 'maand') return ty === now.getFullYear() && tm === (now.getMonth()+1);
   if (period === 'week')  return getWeekNumber(t.date) === getWeekNumber(today()) && ty === now.getFullYear();
   return true;
+}
+
+// Flexibele periode-check t.b.v. de declaratie-builder (ook met terugwerkende kracht)
+function tripMatchesDeclPeriod(t, b) {
+  const [ty, tm] = t.date.split('-').map(Number);
+  const now = new Date();
+  switch (b.periodType) {
+    case 'week':            return getWeekNumber(t.date) === getWeekNumber(today()) && ty === now.getFullYear();
+    case 'maand':           return ty === now.getFullYear() && tm === (now.getMonth()+1);
+    case 'jaar':            return ty === now.getFullYear();
+    case 'specifieke_maand':return ty === Number(b.jaar) && tm === Number(b.maand);
+    case 'specifiek_jaar':  return ty === Number(b.jaar);
+    case 'aangepast':
+      if (!b.van || !b.tot) return true;
+      return t.date >= b.van && t.date <= b.tot;
+    default: return true;
+  }
 }
 
 // ─── SYNC STATUS ─────────────────────────────────────────────────────────────
@@ -1378,29 +1411,29 @@ function renderOverview() {
     const arrow  = isLess ? '↓' : '↑';
     const bg     = isLess ? '#dcfce7' : '#fee2e2';
     const fg     = isLess ? '#15803d' : '#dc2626';
-    return `<span style="margin-left:10px;font-size:0.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:${bg};color:${fg};white-space:nowrap;">${arrow} ${Math.abs(co2Diff).toFixed(0)}% t.o.v. ${maandNamen[prevM-1]}</span>`;
+    return `<span style="font-size:0.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:${bg};color:${fg};white-space:nowrap;">${arrow} ${Math.abs(co2Diff).toFixed(0)}% t.o.v. ${maandNamen[prevM-1]}</span>`;
   })();
 
   const kmDiffBadge = kmDiff === null ? '' : (() => {
     const arrow = kmDiff <= 0 ? '↓' : '↑';
-    return `<span style="margin-left:10px;font-size:0.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#e0f2fe;color:#0369a1;white-space:nowrap;">${arrow} ${Math.abs(kmDiff).toFixed(0)}% t.o.v. ${maandNamen[prevM-1]}</span>`;
+    return `<span style="font-size:0.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#e0f2fe;color:#0369a1;white-space:nowrap;">${arrow} ${Math.abs(kmDiff).toFixed(0)}% t.o.v. ${maandNamen[prevM-1]}</span>`;
   })();
 
   const co2Card = totalKm > 0 ? `
   <div class="form-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-    <div style="font-size:2rem;">🌿</div>
+    <div class="oc-icon" style="font-size:2rem;">🌿</div>
     <div>
       <div class="section-title" style="margin-bottom:3px;">CO₂ uitstoot · ${maandNamen[curM-1]}</div>
-      <div style="font-size:1.4rem;font-weight:800;color:var(--accent);display:flex;align-items:center;flex-wrap:wrap;">${co2ThisMonth.toFixed(0)} kg CO₂${co2DiffBadge}</div>
+      <div class="oc-value" style="font-size:1.4rem;font-weight:800;color:var(--accent);display:flex;align-items:center;flex-wrap:wrap;gap:8px;">${co2ThisMonth.toFixed(0)} kg CO₂<span class="oc-badge">${co2DiffBadge}</span></div>
     </div>
   </div>` : '';
 
   const kmCard = totalKm > 0 ? `
   <div class="form-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-    <div style="font-size:2rem;">🛣️</div>
+    <div class="oc-icon" style="font-size:2rem;">🛣️</div>
     <div>
       <div class="section-title" style="margin-bottom:3px;">Km gereden · ${maandNamen[curM-1]}</div>
-      <div style="font-size:1.4rem;font-weight:800;color:var(--accent);display:flex;align-items:center;flex-wrap:wrap;">${fmt(kmThisMonth)} km${kmDiffBadge}</div>
+      <div class="oc-value" style="font-size:1.4rem;font-weight:800;color:var(--accent);display:flex;align-items:center;flex-wrap:wrap;gap:8px;">${fmt(kmThisMonth)} km<span class="oc-badge">${kmDiffBadge}</span></div>
     </div>
   </div>` : '';
 
@@ -1751,25 +1784,7 @@ function renderTrips() {
     <button class="filter-btn ${isQuick('alles')?'active':''}"  onclick="setQuickFilter('alles')">☰ Alles</button>
   </div>`;
 
-  // ── Categorie-declaratie samenvatting (alleen zichtbaar bij actief categorie-filter) ──
-  let declaratieBlock = '';
-  if (state.filterCategory !== 'all') {
-    const cat = getCatById(state.filterCategory);
-    const catLabel = cat ? `${cat.icon} ${cat.label}` : state.filterCategory;
-    declaratieBlock = `
-    <div class="form-card" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-      <div style="font-size:1.8rem;">🧾</div>
-      <div style="flex:1;min-width:200px;">
-        <div class="section-title" style="margin-bottom:3px;">${catLabel} · ${periodLabels[state.filterPeriod]}</div>
-        <div style="font-size:1.25rem;font-weight:800;color:var(--txt);">${fmt(totalKm)} km <span style="color:var(--txt3);font-weight:600;font-size:0.9rem;">·</span> <span style="color:var(--accent2);">${fmtEur(totalVerg)}</span></div>
-        <div style="font-size:0.76rem;color:var(--txt3);margin-top:2px;">${f.length} rit${f.length!==1?'ten':''} in deze selectie</div>
-      </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn btn-sm btn-primary" onclick="bewaarDeclaratie()">💾 Opslaan als declaratie</button>
-        <button class="btn btn-sm btn-ghost" onclick="toonDeclaratieHistorie()">📋 Opgeslagen declaraties</button>
-      </div>
-    </div>`;
-  }
+  const declaratieBlock = renderDeclaratieBuilder();
 
   const densityToggle = `
   <div class="trips-viewtoggle">
@@ -2809,29 +2824,160 @@ function sluitHistoriePopup() {
 }
 window.sluitHistoriePopup = sluitHistoriePopup;
 
-// ── FEATURE: Categorie-declaraties opslaan/bekijken/verwijderen ──
-function bewaarDeclaratie() {
-  if (state.filterCategory === 'all') return;
+// ── FEATURE: Declaratie-builder (categorieën, bestuurder, terugwerkende periode, notitie, status) ──
+function declBuilderFilteredTrips() {
+  const b = state.declBuilder;
   let f = [...state.trips];
-  if (state.filterCarId    !== 'all') f = f.filter(t => t.carId    === parseInt(state.filterCarId));
-  if (state.filterDriverId !== 'all') f = f.filter(t => t.driverId === parseInt(state.filterDriverId));
-  if (state.filterChecked === 'open')    f = f.filter(t => !t.checked);
-  if (state.filterChecked === 'checked') f = f.filter(t =>  t.checked);
-  f = f.filter(t => t.goal === state.filterCategory);
-  if (state.filterPeriod !== 'all') f = f.filter(t => tripInPeriod(t, state.filterPeriod));
+  if (b.categories.length > 0) f = f.filter(t => b.categories.includes(t.goal));
+  if (b.driverId !== 'all') f = f.filter(t => t.driverId === parseInt(b.driverId));
+  f = f.filter(t => tripMatchesDeclPeriod(t, b));
+  return f;
+}
 
-  if (f.length === 0) { alert('Geen ritten om op te slaan in deze selectie.'); return; }
+function declBuilderPeriodLabel() {
+  const b = state.declBuilder;
+  const maandNamenVol = ['januari','februari','maart','april','mei','juni','juli','augustus','september','oktober','november','december'];
+  switch (b.periodType) {
+    case 'week':             return 'Deze week';
+    case 'maand':            return 'Deze maand';
+    case 'jaar':              return 'Dit jaar';
+    case 'specifieke_maand': return `${maandNamenVol[Number(b.maand)-1]} ${b.jaar}`;
+    case 'specifiek_jaar':   return `Jaar ${b.jaar}`;
+    case 'aangepast':        return (b.van && b.tot) ? `${b.van} t/m ${b.tot}` : 'Kies een periode';
+    default: return '';
+  }
+}
 
-  const cat = getCatById(state.filterCategory);
-  const periodLabels = { all: 'Alle periodes', week: 'Deze week', maand: 'Deze maand', jaar: 'Dit jaar' };
-  const naam = prompt('Naam voor deze declaratie:', `${cat?cat.label:state.filterCategory} · ${periodLabels[state.filterPeriod]}`);
+function setDeclBuilderField(field, value) {
+  state.declBuilder[field] = value;
+  render();
+}
+window.setDeclBuilderField = setDeclBuilderField;
+
+function toggleDeclBuilderCat(catId) {
+  const b = state.declBuilder;
+  const idx = b.categories.indexOf(catId);
+  if (idx === -1) b.categories.push(catId); else b.categories.splice(idx, 1);
+  render();
+}
+window.toggleDeclBuilderCat = toggleDeclBuilderCat;
+
+function renderDeclaratieBuilder() {
+  const b = state.declBuilder;
+  const f = declBuilderFilteredTrips();
+  const totalKm   = f.reduce((a,t)=>a+t.diff,0);
+  const totalVerg = f.reduce((a,t)=>a+t.vergoeding,0);
+
+  const catChips = state.categories.map(c => {
+    const active = b.categories.includes(c.id);
+    return `<button type="button" class="filter-btn ${active?'active':''}" style="${active?'':`background:${c.color};color:${c.textColor};border-color:transparent;`}" onclick="toggleDeclBuilderCat('${c.id}')">${c.icon} ${c.label}</button>`;
+  }).join('');
+
+  const driverOpts = state.drivers.map(d=>`<option value="${d.id}" ${b.driverId==d.id?'selected':''}>${d.emoji} ${d.name}</option>`).join('');
+
+  const maandNamen = ['jan','feb','mrt','apr','mei','jun','jul','aug','sep','okt','nov','dec'];
+  const jaarOpts = (() => {
+    const years = new Set([new Date().getFullYear()]);
+    state.trips.forEach(t => years.add(parseInt(t.date.split('-')[0])));
+    return [...years].sort((a,b2)=>b2-a).map(y=>`<option value="${y}" ${b.jaar==y?'selected':''}>${y}</option>`).join('');
+  })();
+  const maandSelectOpts = maandNamen.map((m,i)=>`<option value="${i+1}" ${b.maand==(i+1)?'selected':''}>${m}</option>`).join('');
+
+  let periodExtra = '';
+  if (b.periodType === 'specifieke_maand') {
+    periodExtra = `
+      <select onchange="setDeclBuilderField('maand',this.value)" style="width:auto;">${maandSelectOpts}</select>
+      <select onchange="setDeclBuilderField('jaar',this.value)" style="width:auto;">${jaarOpts}</select>`;
+  } else if (b.periodType === 'specifiek_jaar') {
+    periodExtra = `<select onchange="setDeclBuilderField('jaar',this.value)" style="width:auto;">${jaarOpts}</select>`;
+  } else if (b.periodType === 'aangepast') {
+    periodExtra = `
+      <input type="date" value="${b.van}" onchange="setDeclBuilderField('van',this.value)" style="width:auto;">
+      <span style="color:var(--txt3);font-size:0.8rem;">t/m</span>
+      <input type="date" value="${b.tot}" onchange="setDeclBuilderField('tot',this.value)" style="width:auto;">`;
+  }
+
+  return `
+  <div class="form-card" style="margin-bottom:16px;">
+    <div class="section-title" style="margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+      🧾 Declaratie maken <span style="font-weight:500;color:var(--txt3);font-size:0.72rem;">(ook met terugwerkende kracht)</span>
+    </div>
+
+    <label style="font-size:0.68rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.04em;">Categorieën</label>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px;">
+      ${catChips}
+      <span style="font-size:0.72rem;color:var(--txt3);align-self:center;">${b.categories.length===0?'(geen selectie = alle categorieën)':''}</span>
+    </div>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;">
+      <div>
+        <label style="font-size:0.68rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:3px;">Bestuurder</label>
+        <select onchange="setDeclBuilderField('driverId',this.value)" style="width:auto;">
+          <option value="all" ${b.driverId==='all'?'selected':''}>Alle bestuurders</option>
+          ${driverOpts}
+        </select>
+      </div>
+      <div>
+        <label style="font-size:0.68rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:3px;">Periode</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          <select onchange="setDeclBuilderField('periodType',this.value)" style="width:auto;">
+            <option value="week"             ${b.periodType==='week'?'selected':''}>Deze week</option>
+            <option value="maand"            ${b.periodType==='maand'?'selected':''}>Deze maand</option>
+            <option value="jaar"             ${b.periodType==='jaar'?'selected':''}>Dit jaar</option>
+            <option value="specifieke_maand" ${b.periodType==='specifieke_maand'?'selected':''}>Specifieke maand...</option>
+            <option value="specifiek_jaar"   ${b.periodType==='specifiek_jaar'?'selected':''}>Specifiek jaar...</option>
+            <option value="aangepast"        ${b.periodType==='aangepast'?'selected':''}>Aangepaste periode...</option>
+          </select>
+          ${periodExtra}
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="font-size:0.68rem;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:3px;">Notitie (optioneel)</label>
+      <input type="text" placeholder="bijv. ingediend bij HR op..." value="${b.notitie}" oninput="setDeclBuilderFieldNoRender('notitie',this.value)">
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;padding-top:10px;border-top:1px solid var(--bdr);">
+      <div>
+        <div style="font-size:1.15rem;font-weight:800;color:var(--txt);">${fmt(totalKm)} km <span style="color:var(--txt3);font-weight:600;font-size:0.85rem;">·</span> <span style="color:var(--accent2);">${fmtEur(totalVerg)}</span></div>
+        <div style="font-size:0.74rem;color:var(--txt3);margin-top:2px;">${f.length} rit${f.length!==1?'ten':''} · ${declBuilderPeriodLabel()}</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-sm btn-primary" onclick="bewaarDeclaratie()">💾 Opslaan als declaratie</button>
+        <button class="btn btn-sm btn-ghost" onclick="toonDeclaratieHistorie()">📋 Opgeslagen declaraties</button>
+      </div>
+    </div>
+  </div>`;
+}
+window.renderDeclaratieBuilder = renderDeclaratieBuilder;
+
+// Notitie-veld bijwerken zonder bij elke toetsaanslag te her-renderen (voorkomt focusverlies)
+function setDeclBuilderFieldNoRender(field, value) {
+  state.declBuilder[field] = value;
+}
+window.setDeclBuilderFieldNoRender = setDeclBuilderFieldNoRender;
+
+function bewaarDeclaratie() {
+  const b = state.declBuilder;
+  const f = declBuilderFilteredTrips();
+  if (f.length === 0) { alert('Geen ritten gevonden binnen deze selectie.'); return; }
+
+  const catLabel = b.categories.length === 0
+    ? 'Alle categorieën'
+    : b.categories.map(id => { const c = getCatById(id); return c ? c.label : id; }).join(' + ');
+  const defaultNaam = `${catLabel} · ${declBuilderPeriodLabel()}`;
+  const naam = prompt('Naam voor deze declaratie:', defaultNaam);
   if (naam === null) return;
 
   const declaratie = {
     id: state.nextDeclaratieId++,
-    naam: naam || `${cat?cat.label:state.filterCategory}`,
-    categorie: state.filterCategory,
-    periode: state.filterPeriod,
+    naam: naam || defaultNaam,
+    categorieen: [...b.categories],
+    driverId: b.driverId,
+    periodeLabel: declBuilderPeriodLabel(),
+    notitie: b.notitie || '',
+    status: 'concept',
     datum: new Date().toLocaleDateString('nl-NL'),
     aantalRitten: f.length,
     totaalKm: f.reduce((a,t)=>a+t.diff,0),
@@ -2841,27 +2987,46 @@ function bewaarDeclaratie() {
   state.declaraties.unshift(declaratie);
   state.declaraties = state.declaraties.slice(0, 200);
   pushToFirebase();
-  alert('✅ Declaratie opgeslagen!');
   toonDeclaratieHistorie();
 }
 window.bewaarDeclaratie = bewaarDeclaratie;
 
+const DECL_STATUS = {
+  concept:    { label: 'Concept',    bg: '#eef5fc', fg: '#64748b' },
+  ingediend:  { label: 'Ingediend',  bg: '#fef3c7', fg: '#92400e' },
+  uitbetaald: { label: 'Uitbetaald', bg: '#dcfce7', fg: '#15803d' },
+};
+
 function toonDeclaratieHistorie() {
   const box = document.getElementById('declaratie-content');
   if (state.declaraties.length === 0) {
-    box.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="es-icon">🧾</div>Nog geen declaraties opgeslagen.<br><span style="font-size:0.78rem;">Filter op een categorie bij Alle Ritten en klik op "💾 Opslaan als declaratie".</span></div>`;
+    box.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="es-icon">🧾</div>Nog geen declaraties opgeslagen.<br><span style="font-size:0.78rem;">Stel hierboven een declaratie samen en klik op "💾 Opslaan als declaratie".</span></div>`;
   } else {
     box.innerHTML = state.declaraties.map((d, idx) => {
-      const cat = getCatById(d.categorie);
+      const catLabel = (!d.categorieen || d.categorieen.length === 0)
+        ? 'Alle categorieën'
+        : d.categorieen.map(id => { const c = getCatById(id); return c ? `${c.icon} ${c.label}` : id; }).join(' + ');
+      const driver = d.driverId && d.driverId !== 'all' ? getDriverById(parseInt(d.driverId)) : null;
+      const st = DECL_STATUS[d.status || 'concept'];
+      const statusOpts = Object.keys(DECL_STATUS).map(k=>`<option value="${k}" ${(d.status||'concept')===k?'selected':''}>${DECL_STATUS[k].label}</option>`).join('');
       return `
-      <div style="border:1.5px solid #dbe7f3;border-radius:10px;margin-bottom:8px;padding:12px 16px;background:white;display:flex;justify-content:space-between;align-items:center;gap:10px;">
-        <div style="min-width:0;flex:1;">
-          <div style="font-weight:700;font-size:0.88rem;">${cat?cat.icon:'🏷️'} ${d.naam}</div>
-          <div style="font-size:0.74rem;color:#8fa8c2;margin-top:2px;">${fmt(d.totaalKm)} km · ${d.aantalRitten} rit${d.aantalRitten!==1?'ten':''} · Opgeslagen op ${d.datum}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
-          <strong style="color:#0c1e3d;">${fmtEur(d.totaalVergoeding)}</strong>
-          <button class="btn-sm btn-danger-sm" onclick="verwijderDeclaratie(${idx})" title="Declaratie verwijderen">🗑</button>
+      <div style="border:1.5px solid #dbe7f3;border-radius:10px;margin-bottom:8px;padding:12px 16px;background:white;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;">
+          <div style="min-width:0;flex:1;">
+            <div style="font-weight:700;font-size:0.88rem;">${d.naam}</div>
+            <div style="font-size:0.74rem;color:#8fa8c2;margin-top:2px;">${catLabel}${driver?' · '+driver.emoji+' '+driver.name:''}</div>
+            <div style="font-size:0.74rem;color:#8fa8c2;margin-top:1px;">${fmt(d.totaalKm)} km · ${d.aantalRitten} rit${d.aantalRitten!==1?'ten':''} · ${d.periodeLabel||''}</div>
+            <div style="font-size:0.7rem;color:#b0c0d4;margin-top:1px;">Opgeslagen op ${d.datum}</div>
+            ${d.notitie ? `<div style="font-size:0.74rem;color:var(--txt2);margin-top:6px;padding:6px 8px;background:#f8fafc;border-radius:6px;">📝 ${d.notitie}</div>` : ''}
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
+            <strong style="color:#0c1e3d;white-space:nowrap;">${fmtEur(d.totaalVergoeding)}</strong>
+            <select onchange="setDeclaratieStatus(${idx},this.value)" style="font-size:0.68rem;font-weight:700;padding:2px 6px;border-radius:999px;border:1.5px solid ${st.bg};background:${st.bg};color:${st.fg};">${statusOpts}</select>
+            <div style="display:flex;gap:6px;">
+              <button class="btn-sm btn-ghost" onclick="exportDeclaratiePDF(${idx})" title="Exporteren als PDF">📄</button>
+              <button class="btn-sm btn-danger-sm" onclick="verwijderDeclaratie(${idx})" title="Declaratie verwijderen">🗑</button>
+            </div>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -2869,6 +3034,15 @@ function toonDeclaratieHistorie() {
   document.getElementById('declaratie-overlay').style.display = 'flex';
 }
 window.toonDeclaratieHistorie = toonDeclaratieHistorie;
+
+function setDeclaratieStatus(idx, status) {
+  const item = state.declaraties[idx];
+  if (!item) return;
+  item.status = status;
+  pushToFirebase();
+  toonDeclaratieHistorie();
+}
+window.setDeclaratieStatus = setDeclaratieStatus;
 
 function verwijderDeclaratie(idx) {
   const item = state.declaraties[idx];
@@ -2884,6 +3058,51 @@ function sluitDeclaratiePopup() {
   document.getElementById('declaratie-overlay').style.display = 'none';
 }
 window.sluitDeclaratiePopup = sluitDeclaratiePopup;
+
+// Declaratie exporteren als PDF (via browser print-dialoog → "Opslaan als PDF")
+function exportDeclaratiePDF(idx) {
+  const d = state.declaraties[idx];
+  if (!d) return;
+  const trips = state.trips.filter(t => d.tripIds.includes(t.id));
+  const catLabel = (!d.categorieen || d.categorieen.length === 0)
+    ? 'Alle categorieën'
+    : d.categorieen.map(id => { const c = getCatById(id); return c ? c.label : id; }).join(' + ');
+  const driver = d.driverId && d.driverId !== 'all' ? getDriverById(parseInt(d.driverId)) : null;
+  const rows = trips.map(t => {
+    const car = getCarById(t.carId);
+    const drv = getDriverById(t.driverId);
+    return `<tr>
+      <td>${t.date}</td><td>${t.dest}</td><td>${drv?drv.name:'—'}</td><td>${car?car.name:'—'}</td>
+      <td style="text-align:right;">${fmt(t.diff)} km</td><td style="text-align:right;">${fmtEur(t.vergoeding)}</td>
+    </tr>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${d.naam}</title>
+  <style>
+    body{font-family:Arial,sans-serif;color:#0c1e3d;padding:32px;}
+    h1{font-size:1.3rem;margin-bottom:4px;}
+    .sub{color:#64748b;font-size:0.85rem;margin-bottom:20px;}
+    table{width:100%;border-collapse:collapse;font-size:0.82rem;margin-top:16px;}
+    th{text-align:left;border-bottom:2px solid #0c1e3d;padding:6px 8px;font-size:0.72rem;text-transform:uppercase;color:#64748b;}
+    td{padding:6px 8px;border-bottom:1px solid #e2e8f0;}
+    .totals{margin-top:16px;text-align:right;font-size:1rem;font-weight:700;}
+    .notitie{margin-top:16px;padding:10px;background:#f8fafc;border-radius:8px;font-size:0.82rem;}
+  </style></head><body>
+    <h1>🧾 ${d.naam}</h1>
+    <div class="sub">${catLabel}${driver?' · '+driver.name:''} · ${d.periodeLabel||''} · Opgesteld op ${d.datum}</div>
+    <table>
+      <thead><tr><th>Datum</th><th>Bestemming</th><th>Bestuurder</th><th>Auto</th><th style="text-align:right;">Km</th><th style="text-align:right;">Vergoeding</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="totals">Totaal: ${fmt(d.totaalKm)} km · ${fmtEur(d.totaalVergoeding)}</div>
+    ${d.notitie ? `<div class="notitie">📝 ${d.notitie}</div>` : ''}
+  </body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 300);
+}
+window.exportDeclaratiePDF = exportDeclaratiePDF;
 
 // Eenmalige migratie: oude historie uit localStorage naar de gesyncte state halen.
 function migreerBetalingHistorie() {
