@@ -63,7 +63,7 @@
   .car-card:hover { transform: translateY(-2px); box-shadow: 0 4px 14px rgba(12,30,61,0.1); }
   .car-card .car-icon { font-size: 2rem; margin-bottom: 8px; }
   .car-card .car-name { font-weight: 700; font-size: 1rem; margin-bottom: 4px; color: var(--txt); }
-  .car-card .car-km { font-size: 1.2rem; font-weight: 800; color: var(--txt); }
+  .car-card .car-km { font-size: 0.75rem; font-weight: 500; color: var(--txt3); }
   .car-card .car-km span { font-size: 0.75rem; font-weight: 500; color: var(--txt3); }
   .car-card .car-trips { font-size: 0.78rem; color: var(--txt3); margin-top: 4px; }
   .car-unknown-km { font-size: 0.75rem; color: #c05621; background: #fffaf0; border: 1px solid #fbd38d; border-radius: 6px; padding: 2px 7px; margin-top: 6px; display: inline-block; font-weight: 600; }
@@ -146,13 +146,18 @@
   .trips-search { flex: 1; min-width: 160px; padding: 9px 14px; border: 1.5px solid var(--bdr); border-radius: 8px; font-size: 0.88rem; background: var(--surf2); color: var(--txt); }
   .trips-search:focus { outline: none; border-color: var(--accent); background: white; }
   .trips-viewtoggle { display: flex; gap: 6px; flex-shrink: 0; }
-  .trips-filters { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+  .trips-filters { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 12px; }
   .filter-field { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
   .filter-field label { font-size: 0.62rem; font-weight: 700; color: var(--txt3); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
   .filter-field select { width: 100%; padding: 7px 10px; border-radius: 8px; border: 1.5px solid var(--bdr); font-size: 0.8rem; font-weight: 600; color: var(--txt2); background: var(--surf); cursor: pointer; }
+  .quick-filters { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .trip-list.compact { gap: 4px; }
+  .trip-list.compact .trip-item { padding: 8px 12px !important; }
+  .trip-list.compact .trip-row-top { margin-bottom: 4px !important; }
+  .trip-list.compact .driver-chip { width: 26px !important; height: 26px !important; font-size: 14px !important; }
+  .trip-list.compact .trip-subline { display: none !important; }
   @media (max-width: 700px) {
     .trips-filters { grid-template-columns: 1fr 1fr; }
-    .filter-field:nth-child(3) { grid-column: 1 / -1; }
   }
   @media (max-width: 480px) {
     .trips-viewtoggle { width: 100%; }
@@ -337,7 +342,10 @@
   /* ── Redesign: Desktop route/notitie subline ── */
   .trip-subline { display: flex; gap: 14px; margin-top: 3px; align-items: center; }
   .trip-subline span { font-size: 0.72rem; color: var(--txt3); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  @media (max-width: 860px) { .trip-subline { display: none; } }
+  @media (max-width: 860px) {
+    .trip-subline { display: none; }
+    .overview-cards-row { grid-template-columns: 1fr !important; }
+  }
 
 </style>
 </head>
@@ -497,6 +505,18 @@
   </div>
 </div>
 
+<!-- ── DECLARATIES POPUP ── -->
+<div class="betaling-overlay" id="declaratie-overlay" style="display:none;">
+  <div class="betaling-box" style="max-width:560px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+      <h2>🧾 Opgeslagen declaraties</h2>
+      <button onclick="sluitDeclaratiePopup()" style="font-size:1.2rem;background:none;border:none;cursor:pointer;color:#8fa8c2;">✕</button>
+    </div>
+    <div id="declaratie-content"></div>
+    <button class="btn btn-ghost btn-block" style="margin-top:14px;" onclick="sluitDeclaratiePopup()">Sluiten</button>
+  </div>
+</div>
+
 <!-- ── RIT DETAIL POPUP ── -->
 <div class="betaling-overlay" id="trip-detail-overlay" style="display:none;" onclick="if(event.target===this) sluitTripDetail()">
   <div class="betaling-box" style="max-width:520px;">
@@ -556,6 +576,11 @@ const state = {
   statYear: new Date().getFullYear(),
   statMonth: new Date().getMonth() + 1,
   statWeek: null,
+  filterCategory: 'all',
+  filterPeriod: 'all',      // 'all' | 'week' | 'maand' | 'jaar'
+  ritten_density: 'comfortable', // 'comfortable' | 'compact'
+  declaraties: [],
+  nextDeclaratieId: 1,
 };
 
 // Default data for first run
@@ -588,6 +613,16 @@ function carColor(carId) {
   return CAR_COLORS[idx % CAR_COLORS.length] || '#dbe7f3';
 }
 
+function tripInPeriod(t, period) {
+  if (period === 'all') return true;
+  const now = new Date();
+  const [ty, tm, td] = t.date.split('-').map(Number);
+  if (period === 'jaar')  return ty === now.getFullYear();
+  if (period === 'maand') return ty === now.getFullYear() && tm === (now.getMonth()+1);
+  if (period === 'week')  return getWeekNumber(t.date) === getWeekNumber(today()) && ty === now.getFullYear();
+  return true;
+}
+
 // ─── SYNC STATUS ─────────────────────────────────────────────────────────────
 function setSyncStatus(status) {
   const map = { online:'green', saving:'orange', offline:'red', local:'orange' };
@@ -609,7 +644,8 @@ function saveLocal() {
   const data = { cars: state.cars, drivers: state.drivers, trips: state.trips,
     tarief: state.tarief, nextCarId: state.nextCarId, nextDriverId: state.nextDriverId, nextTripId: state.nextTripId,
     categories: state.categories, favBestemmingen: state.favBestemmingen, terugkerendeRitten: state.terugkerendeRitten,
-    nextCatId: state.nextCatId, nextTerugkerendId: state.nextTerugkerendId, betalingHistorie: state.betalingHistorie };
+    nextCatId: state.nextCatId, nextTerugkerendId: state.nextTerugkerendId, betalingHistorie: state.betalingHistorie,
+    declaraties: state.declaraties, nextDeclaratieId: state.nextDeclaratieId };
   localStorage.setItem(LS_KEY, JSON.stringify(data));
   setSyncStatus('local');
 }
@@ -623,7 +659,7 @@ function loadLocal() {
         tarief: d.tarief||0.20, nextCarId: d.nextCarId||1, nextDriverId: d.nextDriverId||1, nextTripId: d.nextTripId||1,
         categories: d.categories || state.categories, favBestemmingen: d.favBestemmingen||[],
         terugkerendeRitten: d.terugkerendeRitten||[], nextCatId: d.nextCatId||3, nextTerugkerendId: d.nextTerugkerendId||1,
-        betalingHistorie: d.betalingHistorie||[] });
+        betalingHistorie: d.betalingHistorie||[], declaraties: d.declaraties||[], nextDeclaratieId: d.nextDeclaratieId||1 });
       if (!state.cars.length)    { state.cars    = DEFAULT_CARS;    state.nextCarId    = 5; }
       if (!state.drivers.length) { state.drivers = DEFAULT_DRIVERS; state.nextDriverId = 3; }
     } else {
@@ -654,6 +690,8 @@ async function pushToFirebase() {
       nextCatId:           state.nextCatId,
       nextTerugkerendId:   state.nextTerugkerendId,
       betalingHistorie:    state.betalingHistorie,
+      declaraties:         state.declaraties,
+      nextDeclaratieId:    state.nextDeclaratieId,
     });
     setSyncStatus('online');
   } catch(e) {
@@ -680,6 +718,8 @@ function subscribeFirebase() {
       state.nextCatId          = d.nextCatId          || 3;
       state.nextTerugkerendId  = d.nextTerugkerendId  || 1;
       state.betalingHistorie   = d.betalingHistorie   || [];
+      state.declaraties        = d.declaraties        || [];
+      state.nextDeclaratieId   = d.nextDeclaratieId    || 1;
       migreerBetalingHistorie();
     } else {
       // First run — push defaults
@@ -1192,12 +1232,32 @@ function setSearch(val) {
 window.setSearch = setSearch;
 
 function setFilter(type, val) {
-  if (type === 'car')     state.filterCarId    = val;
-  if (type === 'checked') state.filterChecked  = val;
-  if (type === 'driver')  state.filterDriverId = val;
+  if (type === 'car')      state.filterCarId    = val;
+  if (type === 'checked')  state.filterChecked  = val;
+  if (type === 'driver')   state.filterDriverId = val;
+  if (type === 'category') state.filterCategory = val;
+  if (type === 'period')   state.filterPeriod   = val;
   render();
 }
 window.setFilter = setFilter;
+
+function setQuickFilter(type) {
+  // Reset naar een schone basis en pas dan de gekozen snelfilter toe
+  state.filterChecked = 'all';
+  state.filterPeriod  = 'all';
+  if (type === 'week')  state.filterPeriod  = 'week';
+  if (type === 'maand') state.filterPeriod  = 'maand';
+  if (type === 'open')  state.filterChecked = 'open';
+  // 'alles' laat beide op hun resetwaarde staan
+  render();
+}
+window.setQuickFilter = setQuickFilter;
+
+function setDensity(mode) {
+  state.ritten_density = mode;
+  render();
+}
+window.setDensity = setDensity;
 
 // ─── RESET CONFIG ─────────────────────────────────────────────────────────────
 function resetConfig() {
@@ -1277,6 +1337,12 @@ function renderOverview() {
   if (co2PrevMonth > 0) {
     co2Diff = ((co2ThisMonth - co2PrevMonth) / co2PrevMonth) * 100;
   }
+  const kmThisMonth = state.trips.filter(t=>inMonth(t,curY,curM)).reduce((a,t)=>a+t.diff,0);
+  const kmPrevMonth  = state.trips.filter(t=>inMonth(t,prevY,prevM)).reduce((a,t)=>a+t.diff,0);
+  let kmDiff = null;
+  if (kmPrevMonth > 0) {
+    kmDiff = ((kmThisMonth - kmPrevMonth) / kmPrevMonth) * 100;
+  }
 
   const carCards = state.cars.map(c => {
     const ct = state.trips.filter(t=>t.carId===c.id);
@@ -1315,8 +1381,13 @@ function renderOverview() {
     return `<span style="margin-left:10px;font-size:0.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:${bg};color:${fg};white-space:nowrap;">${arrow} ${Math.abs(co2Diff).toFixed(0)}% t.o.v. ${maandNamen[prevM-1]}</span>`;
   })();
 
+  const kmDiffBadge = kmDiff === null ? '' : (() => {
+    const arrow = kmDiff <= 0 ? '↓' : '↑';
+    return `<span style="margin-left:10px;font-size:0.8rem;font-weight:700;padding:3px 10px;border-radius:999px;background:#e0f2fe;color:#0369a1;white-space:nowrap;">${arrow} ${Math.abs(kmDiff).toFixed(0)}% t.o.v. ${maandNamen[prevM-1]}</span>`;
+  })();
+
   const co2Card = totalKm > 0 ? `
-  <div class="form-card" style="display:flex;align-items:center;gap:16px;margin-bottom:20px;flex-wrap:wrap;">
+  <div class="form-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
     <div style="font-size:2rem;">🌿</div>
     <div>
       <div class="section-title" style="margin-bottom:3px;">CO₂ uitstoot · ${maandNamen[curM-1]}</div>
@@ -1324,17 +1395,29 @@ function renderOverview() {
     </div>
   </div>` : '';
 
+  const kmCard = totalKm > 0 ? `
+  <div class="form-card" style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <div style="font-size:2rem;">🛣️</div>
+    <div>
+      <div class="section-title" style="margin-bottom:3px;">Km gereden · ${maandNamen[curM-1]}</div>
+      <div style="font-size:1.4rem;font-weight:800;color:var(--accent);display:flex;align-items:center;flex-wrap:wrap;">${fmt(kmThisMonth)} km${kmDiffBadge}</div>
+    </div>
+  </div>` : '';
+
+  const controlerenBadge = openCount > 0
+    ? `<span onclick="showTab('ritten');setFilter('checked','open');" style="cursor:pointer;font-size:0.78rem;font-weight:700;padding:4px 12px;border-radius:999px;background:#fee2e2;color:#dc2626;white-space:nowrap;">⚠️ ${openCount} nog te controleren</span>`
+    : `<span style="font-size:0.78rem;font-weight:700;padding:4px 12px;border-radius:999px;background:#dcfce7;color:#15803d;white-space:nowrap;">✅ Alles gecontroleerd</span>`;
+
   return `
-  <div class="stats-grid">
-    <div class="stat-card accent"><div class="stat-val">${fmt(totalKm)}</div><div class="stat-label">Totaal km gereden</div></div>
-    <div class="stat-card"><div class="stat-val">${totalTrips}</div><div class="stat-label">Ritten geregistreerd</div></div>
-    <div class="stat-card"><div class="stat-val red">${openCount}</div><div class="stat-label red">Nog te controleren</div></div>
-    <div class="stat-card"><div class="stat-val">${fmt(privKm)}</div><div class="stat-label">Privé km</div></div>
-    <div class="stat-card"><div class="stat-val">${fmt(werkKm)}</div><div class="stat-label">Werk km</div></div>
+  <div class="section-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <span>Auto's</span>
+    ${controlerenBadge}
   </div>
-  <div class="section-title">Auto's</div>
   <div class="car-grid scrollable">${carCards}</div>
-  ${co2Card}
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0;" class="overview-cards-row">
+    ${kmCard}
+    ${co2Card}
+  </div>
   ${recent}`;
 }
 
@@ -1610,6 +1693,8 @@ function renderTrips() {
   if (state.filterDriverId !== 'all') f = f.filter(t => t.driverId === parseInt(state.filterDriverId));
   if (state.filterChecked === 'open')    f = f.filter(t => !t.checked);
   if (state.filterChecked === 'checked') f = f.filter(t =>  t.checked);
+  if (state.filterCategory !== 'all') f = f.filter(t => t.goal === state.filterCategory);
+  if (state.filterPeriod   !== 'all') f = f.filter(t => tripInPeriod(t, state.filterPeriod));
   if (state.searchQuery) {
     const q = state.searchQuery.toLowerCase();
     f = f.filter(t => {
@@ -1634,12 +1719,63 @@ function renderTrips() {
     `<option value="${d.id}" ${state.filterDriverId==d.id?'selected':''}>${d.emoji} ${d.name}</option>`
   ).join('');
 
+  const catOpts = state.categories.map(c=>
+    `<option value="${c.id}" ${state.filterCategory==c.id?'selected':''}>${c.icon} ${c.label}</option>`
+  ).join('');
+
+  const periodLabels = { all: 'Alle periodes', week: 'Deze week', maand: 'Deze maand', jaar: 'Dit jaar' };
+  const periodOpts = Object.keys(periodLabels).map(k=>
+    `<option value="${k}" ${state.filterPeriod===k?'selected':''}>${periodLabels[k]}</option>`
+  ).join('');
+
   const summary = f.length > 0
     ? `<div style="display:flex;gap:16px;margin-bottom:12px;font-size:0.82rem;color:#2c4a6e;font-weight:600;flex-wrap:wrap;">
         <span>📊 ${f.length} rit${f.length!==1?'ten':''}</span>
         <span>📍 ${fmt(totalKm)} km</span>
         <span>💶 ${fmtEur(totalVerg)}</span>
        </div>` : '';
+
+  // ── Snelfilters (deze week / deze maand / open / alles) ──
+  const isQuick = (t) => {
+    if (t === 'week')  return state.filterPeriod === 'week';
+    if (t === 'maand') return state.filterPeriod === 'maand';
+    if (t === 'open')  return state.filterChecked === 'open';
+    if (t === 'alles') return state.filterPeriod === 'all' && state.filterChecked === 'all';
+    return false;
+  };
+  const quickFilters = `
+  <div class="quick-filters">
+    <button class="filter-btn ${isQuick('week') ?'active':''}"  onclick="setQuickFilter('week')">📅 Deze week</button>
+    <button class="filter-btn ${isQuick('maand')?'active':''}"  onclick="setQuickFilter('maand')">🗓️ Deze maand</button>
+    <button class="filter-btn ${isQuick('open') ?'active':''}"  onclick="setQuickFilter('open')">○ Open</button>
+    <button class="filter-btn ${isQuick('alles')?'active':''}"  onclick="setQuickFilter('alles')">☰ Alles</button>
+  </div>`;
+
+  // ── Categorie-declaratie samenvatting (alleen zichtbaar bij actief categorie-filter) ──
+  let declaratieBlock = '';
+  if (state.filterCategory !== 'all') {
+    const cat = getCatById(state.filterCategory);
+    const catLabel = cat ? `${cat.icon} ${cat.label}` : state.filterCategory;
+    declaratieBlock = `
+    <div class="form-card" style="margin-bottom:16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+      <div style="font-size:1.8rem;">🧾</div>
+      <div style="flex:1;min-width:200px;">
+        <div class="section-title" style="margin-bottom:3px;">${catLabel} · ${periodLabels[state.filterPeriod]}</div>
+        <div style="font-size:1.25rem;font-weight:800;color:var(--txt);">${fmt(totalKm)} km <span style="color:var(--txt3);font-weight:600;font-size:0.9rem;">·</span> <span style="color:var(--accent2);">${fmtEur(totalVerg)}</span></div>
+        <div style="font-size:0.76rem;color:var(--txt3);margin-top:2px;">${f.length} rit${f.length!==1?'ten':''} in deze selectie</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-sm btn-primary" onclick="bewaarDeclaratie()">💾 Opslaan als declaratie</button>
+        <button class="btn btn-sm btn-ghost" onclick="toonDeclaratieHistorie()">📋 Opgeslagen declaraties</button>
+      </div>
+    </div>`;
+  }
+
+  const densityToggle = `
+  <div class="trips-viewtoggle">
+    <button class="filter-btn ${state.ritten_density==='comfortable'?'active':''}" onclick="setDensity('comfortable')" title="Ruim">▤ Ruim</button>
+    <button class="filter-btn ${state.ritten_density==='compact'?'active':''}" onclick="setDensity('compact')" title="Compact">☰ Compact</button>
+  </div>`;
 
   return `
   <div class="trips-toolbar">
@@ -1649,7 +1785,9 @@ function renderTrips() {
       <button class="filter-btn ${state.ritten_view==='lijst'?'active':''}" onclick="setRittenView('lijst')">☰ Lijst</button>
       <button class="filter-btn ${state.ritten_view==='kalender'?'active':''}" onclick="setRittenView('kalender')">📅 Kalender</button>
     </div>
+    ${densityToggle}
   </div>
+  ${quickFilters}
   <div class="trips-filters">
     <div class="filter-field">
       <label>🚗 Auto</label>
@@ -1673,12 +1811,26 @@ function renderTrips() {
         ${driverOpts}
       </select>
     </div>
+    <div class="filter-field">
+      <label>🏷️ Categorie</label>
+      <select onchange="setFilter('category',this.value)">
+        <option value="all" ${state.filterCategory==='all'?'selected':''}>Alle categorieën</option>
+        ${catOpts}
+      </select>
+    </div>
+    <div class="filter-field">
+      <label>🗓️ Periode</label>
+      <select onchange="setFilter('period',this.value)">
+        ${periodOpts}
+      </select>
+    </div>
   </div>
+  ${declaratieBlock}
   ${summary}
   ${state.ritten_view === 'kalender' ? renderKalender(f, state.statYear || new Date().getFullYear(), state.statMonth || (new Date().getMonth()+1)) : (
     f.length===0
       ? `<div class="empty-state"><div class="es-icon">📋</div>Geen ritten gevonden.</div>`
-      : `<div class="trip-list">${f.map(renderTripItem).join('')}</div>`
+      : `<div class="trip-list ${state.ritten_density==='compact'?'compact':''}">${f.map(renderTripItem).join('')}</div>`
   )}`;
 }
 
@@ -2656,6 +2808,82 @@ function sluitHistoriePopup() {
   document.getElementById('historie-overlay').style.display = 'none';
 }
 window.sluitHistoriePopup = sluitHistoriePopup;
+
+// ── FEATURE: Categorie-declaraties opslaan/bekijken/verwijderen ──
+function bewaarDeclaratie() {
+  if (state.filterCategory === 'all') return;
+  let f = [...state.trips];
+  if (state.filterCarId    !== 'all') f = f.filter(t => t.carId    === parseInt(state.filterCarId));
+  if (state.filterDriverId !== 'all') f = f.filter(t => t.driverId === parseInt(state.filterDriverId));
+  if (state.filterChecked === 'open')    f = f.filter(t => !t.checked);
+  if (state.filterChecked === 'checked') f = f.filter(t =>  t.checked);
+  f = f.filter(t => t.goal === state.filterCategory);
+  if (state.filterPeriod !== 'all') f = f.filter(t => tripInPeriod(t, state.filterPeriod));
+
+  if (f.length === 0) { alert('Geen ritten om op te slaan in deze selectie.'); return; }
+
+  const cat = getCatById(state.filterCategory);
+  const periodLabels = { all: 'Alle periodes', week: 'Deze week', maand: 'Deze maand', jaar: 'Dit jaar' };
+  const naam = prompt('Naam voor deze declaratie:', `${cat?cat.label:state.filterCategory} · ${periodLabels[state.filterPeriod]}`);
+  if (naam === null) return;
+
+  const declaratie = {
+    id: state.nextDeclaratieId++,
+    naam: naam || `${cat?cat.label:state.filterCategory}`,
+    categorie: state.filterCategory,
+    periode: state.filterPeriod,
+    datum: new Date().toLocaleDateString('nl-NL'),
+    aantalRitten: f.length,
+    totaalKm: f.reduce((a,t)=>a+t.diff,0),
+    totaalVergoeding: f.reduce((a,t)=>a+t.vergoeding,0),
+    tripIds: f.map(t=>t.id),
+  };
+  state.declaraties.unshift(declaratie);
+  state.declaraties = state.declaraties.slice(0, 200);
+  pushToFirebase();
+  alert('✅ Declaratie opgeslagen!');
+  toonDeclaratieHistorie();
+}
+window.bewaarDeclaratie = bewaarDeclaratie;
+
+function toonDeclaratieHistorie() {
+  const box = document.getElementById('declaratie-content');
+  if (state.declaraties.length === 0) {
+    box.innerHTML = `<div class="empty-state" style="padding:20px;"><div class="es-icon">🧾</div>Nog geen declaraties opgeslagen.<br><span style="font-size:0.78rem;">Filter op een categorie bij Alle Ritten en klik op "💾 Opslaan als declaratie".</span></div>`;
+  } else {
+    box.innerHTML = state.declaraties.map((d, idx) => {
+      const cat = getCatById(d.categorie);
+      return `
+      <div style="border:1.5px solid #dbe7f3;border-radius:10px;margin-bottom:8px;padding:12px 16px;background:white;display:flex;justify-content:space-between;align-items:center;gap:10px;">
+        <div style="min-width:0;flex:1;">
+          <div style="font-weight:700;font-size:0.88rem;">${cat?cat.icon:'🏷️'} ${d.naam}</div>
+          <div style="font-size:0.74rem;color:#8fa8c2;margin-top:2px;">${fmt(d.totaalKm)} km · ${d.aantalRitten} rit${d.aantalRitten!==1?'ten':''} · Opgeslagen op ${d.datum}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+          <strong style="color:#0c1e3d;">${fmtEur(d.totaalVergoeding)}</strong>
+          <button class="btn-sm btn-danger-sm" onclick="verwijderDeclaratie(${idx})" title="Declaratie verwijderen">🗑</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('declaratie-overlay').style.display = 'flex';
+}
+window.toonDeclaratieHistorie = toonDeclaratieHistorie;
+
+function verwijderDeclaratie(idx) {
+  const item = state.declaraties[idx];
+  if (!item) return;
+  if (!confirm(`Declaratie "${item.naam}" verwijderen? Dit kan niet ongedaan gemaakt worden.`)) return;
+  state.declaraties.splice(idx, 1);
+  pushToFirebase();
+  toonDeclaratieHistorie();
+}
+window.verwijderDeclaratie = verwijderDeclaratie;
+
+function sluitDeclaratiePopup() {
+  document.getElementById('declaratie-overlay').style.display = 'none';
+}
+window.sluitDeclaratiePopup = sluitDeclaratiePopup;
 
 // Eenmalige migratie: oude historie uit localStorage naar de gesyncte state halen.
 function migreerBetalingHistorie() {
