@@ -19,12 +19,12 @@
   body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: var(--txt); min-height: 100vh; font-size: 14px; overflow-x: hidden; }
 
   /* ── App shell: sidebar (desktop) + bottom nav (mobile) ── */
-  .app-shell { display: flex; min-height: 100vh; overflow-x: hidden; }
+  .app-shell { display: flex; min-height: 100vh; overflow-x: hidden; align-items: stretch; }
 
   /* ── Sidebar (desktop) ── */
-  .sidebar { width: 230px; flex-shrink: 0; background: var(--sid); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; position: sticky; top: 0; height: 100vh; overflow-y: auto; }
+  .sidebar { width: 230px; flex-shrink: 0; background: var(--sid); padding: 18px 12px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto; }
   .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 4px 8px 16px; border-bottom: 1px solid rgba(255,255,255,0.07); margin-bottom: 12px; }
-  .sidebar-logo-icon { width: 38px; height: 38px; border-radius: 10px; background: var(--sact); display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+  .sidebar-logo-icon { width: 44px; height: 44px; border-radius: 12px; background: var(--sact); display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
   .sidebar-logo-name { font-size: 0.84rem; font-weight: 800; color: white; line-height: 1.25; white-space: nowrap; }
   .sidebar-logo-sub { font-size: 0.65rem; color: var(--stext2); }
   .sidebar-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 9px; font-size: 0.84rem; font-weight: 500; color: var(--stext2); cursor: pointer; transition: background 0.15s, color 0.15s; }
@@ -122,18 +122,7 @@
     .t-driver { flex: 1; font-size: 0.75rem; color: var(--txt3); }
   }
 
-  /* ── Trip item: gestapelde kaart-layout op smalle schermen ── */
-  @media (max-width: 480px) {
-    .trip-item { flex-wrap: wrap; row-gap: 8px; padding: 12px; }
-    .trip-item .t-dest { flex: 1 1 100%; order: 1; white-space: normal; }
-    .trip-item .check-wrap { order: 0; }
-    .trip-item .trip-dot { order: 0; }
-    .trip-item .driver-chip { order: 0; }
-    .trip-item .t-status { order: 2; flex: 0 0 auto; }
-    .trip-item .t-driver { display: none; }
-    .trip-item .t-km { order: 3; margin-left: auto; flex: 0 0 auto; }
-    .trip-item .btn-edit-sm, .trip-item .btn-danger-sm { order: 4; }
-  }
+  /* ── Old stacked layout removed — replaced by .trip-row-top/bottom ── */
 
   /* ── Stats ── */
   .stats-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
@@ -304,6 +293,49 @@
     .car-grid.scrollable { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; margin-bottom: 22px; scrollbar-width: none; }
     .car-grid.scrollable .car-card { min-width: 150px; flex-shrink: 0; }
   }
+
+  /* ── Redesign: Check button ── */
+  .check-btn { width: 32px; height: 32px; border-radius: 8px; border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 14px; color: white; font-weight: 800; transition: all 0.15s ease; flex-shrink: 0; }
+  .check-btn.open { background: #10b981; }
+  .check-btn.checked { background: #d1d5db; }
+
+  /* ── Redesign: Mobile trip card ── */
+  @media (max-width: 860px) {
+    .trip-item { flex-wrap: wrap; padding: 14px 14px 12px !important; border-left: 4px solid var(--trip-car-color, #dbe7f3); gap: 0 !important; border-radius: 14px !important; }
+    .trip-row-top { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; width: 100%; margin-bottom: 10px; }
+    .trip-row-bottom { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; width: 100%; }
+    .trip-badges { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; min-width: 0; }
+    .trip-actions { display: flex; gap: 6px; }
+    .trip-item .t-dest, .trip-item .t-date, .trip-item .t-driver, .trip-item .t-car, .trip-item .t-goal, .trip-item .t-status, .trip-item .t-km { display: none !important; }
+    .trip-item .check-wrap { display: none !important; }
+    .trip-item .trip-dot { display: none !important; }
+    .trip-item > .driver-chip { display: none !important; }
+    .trip-item > .check-btn { display: none !important; }
+    .trip-item > .btn-edit-sm, .trip-item > .btn-danger-sm { display: none !important; }
+  }
+  @media (min-width: 861px) {
+    .trip-row-top, .trip-row-bottom { display: none; }
+  }
+
+  /* ── Redesign: Pill toggle ── */
+  .pill-toggle { display: flex; background: var(--surf2); border-radius: 12px; padding: 3px; gap: 3px; }
+  .pill-toggle button { flex: 1; padding: 10px 0; border-radius: 10px; border: none; font-weight: 700; font-size: 0.82rem; cursor: pointer; transition: all 0.15s ease; }
+  .pill-toggle button.active { background: var(--accent); color: white; }
+  .pill-toggle button:not(.active) { background: transparent; color: var(--txt2); }
+
+  /* ── Redesign: Field box (auto/bestuurder select) ── */
+  .field-box { padding: 10px 14px; border-radius: 10px; border: 1.5px solid var(--bdr); background: var(--surf2); display: flex; align-items: center; gap: 10px; min-height: 56px; cursor: pointer; transition: border-color 0.2s; }
+  .field-box:hover { border-color: var(--accent); }
+  .field-box .field-icon { font-size: 1.5rem; line-height: 1; flex-shrink: 0; }
+  .field-box .field-info { flex: 1; min-width: 0; }
+  .field-box .field-name { font-weight: 700; font-size: 0.9rem; color: var(--txt); line-height: 1.2; }
+  .field-box .field-sub { font-size: 0.72rem; color: var(--txt3); margin-top: 1px; }
+  .field-box .field-arrow { color: var(--txt3); font-size: 0.75rem; flex-shrink: 0; }
+
+  /* ── Redesign: Desktop route/notitie subline ── */
+  .trip-subline { display: flex; gap: 14px; margin-top: 3px; align-items: center; }
+  .trip-subline span { font-size: 0.72rem; color: var(--txt3); display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 860px) { .trip-subline { display: none; } }
 
 </style>
 </head>
@@ -857,9 +889,28 @@ function prefillCarKm() {
   if (car) {
     if (inp) inp.value = car.currentKm || 0;
     if (lbl) lbl.textContent = fmt(car.currentKm || 0);
+    const icoEl = document.getElementById('f-car-icon');
+    const nameEl = document.getElementById('f-car-name');
+    const kmEl = document.getElementById('f-car-km');
+    if (icoEl)  icoEl.textContent = car.icon;
+    if (nameEl) nameEl.textContent = car.name;
+    if (kmEl)   kmEl.textContent = fmt(car.currentKm || 0) + ' km';
   }
+  showKmPreview();
 }
 window.prefillCarKm = prefillCarKm;
+
+function updateDriverField() {
+  const driverId = parseInt(document.getElementById('f-driver')?.value);
+  const driver = getDriverById(driverId);
+  const emojiEl = document.getElementById('f-driver-emoji');
+  const nameEl  = document.getElementById('f-driver-name');
+  if (driver) {
+    if (emojiEl) { emojiEl.textContent = driver.emoji; emojiEl.style.background = driver.color || '#dbe7f3'; }
+    if (nameEl)  nameEl.textContent = driver.name;
+  }
+}
+window.updateDriverField = updateDriverField;
 
 function openEditTrip(id) {
   state.editTripId = id;
@@ -1279,15 +1330,31 @@ function renderAdd() {
     <div class="form-grid">
       <div class="form-group">
         <label>Auto</label>
-        <select id="f-car" onchange="prefillCarKm()">${state.cars.map(c=>`<option value="${c.id}" ${c.id===selectedCarId?'selected':''}>${c.icon} ${c.name} (${fmt(c.currentKm)} km)</option>`).join('')}</select>
+        <div class="field-box" style="position:relative;">
+          <span class="field-icon" id="f-car-icon">${selectedCar ? selectedCar.icon : '🚗'}</span>
+          <div class="field-info">
+            <div class="field-name" id="f-car-name">${selectedCar ? selectedCar.name : '—'}</div>
+            <div class="field-sub" id="f-car-km">${fmt(defaultBeginKm)} km</div>
+          </div>
+          <span class="field-arrow">▼</span>
+          <select id="f-car" onchange="prefillCarKm()" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;">${state.cars.map(c=>`<option value="${c.id}" ${c.id===selectedCarId?'selected':''}>${c.icon} ${c.name} (${fmt(c.currentKm)} km)</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Bestuurder</label>
+        <div class="field-box" style="position:relative;">
+          <div class="driver-chip" id="f-driver-emoji" style="width:34px;height:34px;font-size:1.15rem;background:${state.drivers[0]?state.drivers[0].color||'#dbe7f3':'#dbe7f3'};">${state.drivers[0]?state.drivers[0].emoji:'👤'}</div>
+          <div class="field-info">
+            <div class="field-name" id="f-driver-name">${state.drivers[0]?state.drivers[0].name:'—'}</div>
+            <div class="field-sub">Bestuurder</div>
+          </div>
+          <span class="field-arrow">▼</span>
+          <select id="f-driver" onchange="updateDriverField()" style="position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;">${state.drivers.map(d=>`<option value="${d.id}">${d.emoji} ${d.name}</option>`).join('')}</select>
+        </div>
       </div>
       <div class="form-group">
         <label>Datum</label>
         <input type="date" id="f-date" value="${today()}">
-      </div>
-      <div class="form-group">
-        <label>Bestuurder</label>
-        <select id="f-driver">${state.drivers.map(d=>`<option value="${d.id}">${d.emoji} ${d.name}</option>`).join('')}</select>
       </div>
       <div class="form-group full">
         <label>Bestemming</label>
@@ -1391,11 +1458,48 @@ function renderTripItem(t) {
   const statusBadge = t.checked
     ? '<span class="badge-checked">✔ OK</span>'
     : '<span class="badge-unchecked">○ Open</span>';
-  return `<div class="trip-item ${t.checked?'checked-trip':''}" onclick="openTripDetail(${t.id})" style="cursor:pointer;">
-    <label class="check-wrap" onclick="event.stopPropagation()"><input type="checkbox" ${t.checked?'checked':''} onchange="toggleChecked(${t.id})"></label>
+  const vergBadge = t.teltMee !== false
+    ? `<span class="vergoeding" style="cursor:pointer;margin-top:0;" onclick="event.stopPropagation();toggleTeltMee(${t.id})" title="Klik om uit te sluiten van vergoeding">💶 ${fmtEur(t.vergoeding)}</span>`
+    : `<span class="vergoeding" style="background:#eef5fc;color:#8fa8c2;text-decoration:line-through;cursor:pointer;margin-top:0;" onclick="event.stopPropagation();toggleTeltMee(${t.id})" title="Klik om mee te nemen in vergoeding">💶 ${fmtEur(t.vergoeding)}</span>`;
+  const checkBtnClass = t.checked ? 'check-btn checked' : 'check-btn open';
+  const hasSubline = t.route || t.notitie;
+
+  return `<div class="trip-item ${t.checked?'checked-trip':''}" style="--trip-car-color:${dotColor};cursor:pointer;" onclick="openTripDetail(${t.id})">
+    <!-- ══ MOBILE LAYOUT ══ -->
+    <div class="trip-row-top">
+      <div class="driver-chip" style="background:${driverColor};width:36px;height:36px;font-size:18px;">${driverEmoji}</div>
+      <div style="min-width:0;">
+        <div style="font-weight:700;font-size:0.92rem;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${t.dest}</div>
+        <div style="font-size:0.72rem;color:var(--txt3);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+          ${driverName} · ${carLabel} · ${t.date}
+        </div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-weight:800;font-size:1rem;color:var(--txt);">+${fmt(t.diff)} km</div>
+        <div style="font-size:0.65rem;color:#276749;white-space:nowrap;margin-top:1px;">🌿 ${co2ForTrip(t)} kg CO₂</div>
+      </div>
+    </div>
+    <div class="trip-row-bottom">
+      <div class="trip-badges">
+        ${goalBadge} ${statusBadge} ${vergBadge}
+        ${t.notitie?`<span style="font-size:0.68rem;color:var(--txt3);font-style:italic;">📝 ${t.notitie}</span>`:''}
+      </div>
+      <div class="trip-actions">
+        <button class="${checkBtnClass}" onclick="event.stopPropagation();toggleChecked(${t.id})" title="${t.checked?'Gecheckt — klik om te openen':'Klik om te checken'}">✓</button>
+        <button class="btn-sm btn-edit-sm" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;padding:0;" onclick="event.stopPropagation();openEditTrip(${t.id})" title="Bewerken">✏️</button>
+        <button class="btn-sm btn-danger-sm" style="width:32px;height:32px;display:flex;align-items:center;justify-content:center;padding:0;" onclick="event.stopPropagation();deleteTrip(${t.id})" title="Verwijderen">🗑</button>
+      </div>
+    </div>
+    <!-- ══ DESKTOP LAYOUT ══ -->
+    <button class="${checkBtnClass}" onclick="event.stopPropagation();toggleChecked(${t.id})" title="${t.checked?'Gecheckt — klik om te openen':'Klik om te checken'}">✓</button>
     <div class="trip-dot" style="background:${dotColor};"></div>
     <div class="driver-chip" style="background:${driverColor};">${driverEmoji}</div>
-    <div class="t-dest">${t.dest}${t.notitie?`<span style="font-size:0.7rem;color:#8fa8c2;font-weight:400;margin-left:6px;">📝 ${t.notitie}</span>`:''}${t.route?`<span style="font-size:0.7rem;color:#8fa8c2;font-weight:400;margin-left:6px;">🗺️ ${t.route}</span>`:''}
+    <div class="t-dest">
+      ${t.dest}
+      ${hasSubline ? `<div class="trip-subline">
+        ${t.route ? `<span>🗺️ ${t.route}</span>` : ''}
+        ${t.notitie ? `<span>📝 ${t.notitie}</span>` : ''}
+      </div>` : ''}
     </div>
     <div class="t-goal">${goalBadge}</div>
     <div class="t-date">${t.date}</div>
@@ -1404,9 +1508,7 @@ function renderTripItem(t) {
     <div class="t-status">${statusBadge}</div>
     <div class="t-km">
       <div class="km-diff">+${fmt(t.diff)} km</div>
-      ${t.teltMee !== false
-        ? `<div class="vergoeding" style="cursor:pointer;" onclick="event.stopPropagation();toggleTeltMee(${t.id})" title="Klik om uit te sluiten van vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`
-        : `<div class="vergoeding" style="background:#eef5fc;color:#8fa8c2;text-decoration:line-through;cursor:pointer;" onclick="event.stopPropagation();toggleTeltMee(${t.id})" title="Klik om mee te nemen in vergoeding">💶 ${fmtEur(t.vergoeding)}</div>`}
+      ${vergBadge}
       <div style="font-size:0.68rem;color:#276749;white-space:nowrap;">🌿 ${co2ForTrip(t)} kg CO₂</div>
     </div>
     <button class="btn-sm btn-edit-sm" onclick="event.stopPropagation();openEditTrip(${t.id})" style="flex-shrink:0;" title="Bewerken">✏️</button>
